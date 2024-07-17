@@ -5,3 +5,4 @@ This is where we store GWSC code used for data engineering tasks.
 - Test 3, "Hello World" - Committed in GitHub. Not yet pulled in Databricks.
 - Test 4, "Hello World" - Committed in Databricks before Test 3 pulled from GitHub.
 - Test 5, "Hello World" - Committed in Databricks before Test 6 is committed in GitHub.
+- Test 6, "Hello World" - Committed in GitHub.
