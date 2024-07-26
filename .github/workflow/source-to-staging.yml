@@ -44,6 +44,6 @@ jobs:
             "num_workers": 2
           },
           "notebook_task": {
-            "notebook_path": "/Workspace/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/00_Source_to_Staging/unit-test"
+            "notebook_path": "/Workspace/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/00_Source_to_Staging/unit-test.py"
           }
         }'
