@@ -1,0 +1,49 @@
+name: Source to Staging (Data Engineering)
+
+on:
+  pull_request:
+    branches:
+      - dev-main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      run: |
+        pip install requests
+        pip install databricks-cli
+        pip install pyyaml
+
+    - name: Run Databricks Notebook
+      env:
+        DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+        DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
+      run: |
+        # Install Databricks CLI and configure it
+        databricks configure --token <<EOF
+        $DATABRICKS_HOST
+        $DATABRICKS_TOKEN
+        EOF
+
+        # Run the unit test notebook
+        databricks runs submit --json '{
+          "run_name": "unit-test",
+          "new_cluster": {
+            "spark_version": "7.3.x-scala2.12",
+            "node_type_id": "Standard_DS3_v2",
+            "num_workers": 2
+          },
+          "notebook_task": {
+            "notebook_path": "/Workspace/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/00_Source_to_Staging/unit-test.py"
+          }
+        }'
