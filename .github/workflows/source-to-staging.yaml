@@ -29,12 +29,7 @@ jobs:
         DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
         DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
       run: |
-        echo $DATABRICKS_HOST
-        echo $DATABRICKS_TOKEN
-        databricks configure --token <<EOF
-$DATABRICKS_HOST
-$DATABRICKS_TOKEN
-EOF
+        echo -e "[DEFAULT]\nhost = $DATABRICKS_HOST\ntoken = $DATABRICKS_TOKEN" > ~/.databrickscfg
 
     - name: Run Databricks Notebook
       env:
@@ -52,3 +47,4 @@ EOF
             "notebook_path": "/Workspace/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/00_Source_to_Staging/unit-test"
           }
         }'
+
