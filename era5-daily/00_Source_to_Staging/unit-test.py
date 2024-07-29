@@ -1,53 +1,16 @@
-# Databricks notebook source
-# MAGIC %md
-# MAGIC ### Installation of Required Libraries
-# MAGIC
-# MAGIC This section includes the installation commands for Python libraries that are essential for handling and processing various data formats and performing parallel computations. Each library serves a specific purpose:
-# MAGIC
-# MAGIC - `xarray`: Used for labeling, indexing, and synchronizing multidimensional arrays, especially useful for working with climate data formats like netCDF.
-# MAGIC - `netCDF4` and `h5netcdf`: These libraries provide interfaces to netCDF and HDF5 files, respectively, allowing for efficient storage and access to large datasets.
-# MAGIC - `dask`: Enhances scalability and efficiency in analytics by enabling parallel computing.
-# MAGIC - `rioxarray`: Extends `xarray` to include tools for spatial analysis, such as rasterio integration for geospatial operations.
-# MAGIC - `tqdm`: Provides a progress bar for loops and other iterative computations, useful for tracking the progress of data processing tasks.
+######
+%pip install xarray
+%pip install netCDF4 h5netcdf
+%pip install dask   
+%pip install rioxarray
+%pip install tqdm   
 
-# COMMAND ----------
 
-# MAGIC %pip install xarray
-# MAGIC %pip install netCDF4 h5netcdf
-# MAGIC %pip install dask   
-# MAGIC %pip install rioxarray
-# MAGIC %pip install tqdm 
+###########
+dbutils.library.restartPython() 
 
-# COMMAND ----------
 
-# MAGIC %md
-# MAGIC ### Restarting Python Environment
-# MAGIC
-# MAGIC This command, `dbutils.library.restartPython()`, is used to restart the Python environment within Databricks notebooks. Restarting the Python environment is a critical step after installing new libraries or making significant changes to the environment. It ensures that all installed libraries are loaded correctly and that the environment is reset, clearing any residual state from previous computations. This operation is particularly useful when libraries that affect the entire runtime environment are added or updated.
-
-# COMMAND ----------
-
-dbutils.library.restartPython()
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Importing Necessary Libraries
-# MAGIC
-# MAGIC This code chunk imports the necessary libraries and modules required for data processing and analysis in a PySpark and scientific data context. Each import serves a specific function in the workflow:
-# MAGIC
-# MAGIC - `SparkSession`: Initializes a Spark session, which is the entry point to programming Spark with the Dataset and DataFrame API.
-# MAGIC - `os`: Provides a way of using operating system dependent functionality like reading or writing to the filesystem.
-# MAGIC - `xarray` (imported as `xr`): Facilitates working with labeled multi-dimensional arrays and datasets, especially useful for manipulating large climate data files like netCDF.
-# MAGIC - `datetime`: Used to handle and manipulate date and time data, crucial for time-series analysis.
-# MAGIC - `shutil`: Offers high-level file operations such as copying and archiving.
-# MAGIC - `pandas` (imported as `pd`): Essential for data manipulation and analysis, particularly useful for handling tabular data with heterogeneously-typed columns.
-# MAGIC - `netCDF4` (imported as `nc`): Enables interaction with netCDF files which are commonly used for storing scientific data.
-# MAGIC - `lit`: A function from PySpark's SQL module that is used to add a new column with a constant value or to make explicit data type casting in DataFrame operations.
-# MAGIC - `tqdm.auto`: Automatically selects an appropriate progress bar based on the environment (notebook, terminal, etc.), useful for monitoring the progress of data processing loops.
-
-# COMMAND ----------
-
+##########
 from pyspark.sql import SparkSession
 import os
 import sys
@@ -57,32 +20,9 @@ import shutil
 import pandas as pd 
 import netCDF4 as nc
 from pyspark.sql.functions import lit 
-from tqdm.auto import tqdm
+from tqdm.auto import tqdm 
 
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Function: `spark_copy_and_move_files_by_date`
-# MAGIC
-# MAGIC This function processes and moves NetCDF files from a source folder to a target folder based on a specified date range and file prefix. It leverages Apache Spark for distributed processing, which is particularly useful for handling large datasets efficiently.
-# MAGIC
-# MAGIC #### Parameters:
-# MAGIC - **start_date (str):** The start of the date range for filtering files. The date format is specified by `date_pattern`.
-# MAGIC - **end_date (str):** The end of the date range.
-# MAGIC - **source_folder (str):** The directory containing the source files.
-# MAGIC - **target_folder (str):** The destination directory for the processed files.
-# MAGIC - **prefix (str):** A prefix to filter files by name.
-# MAGIC - **date_pattern (str):** The format string for parsing dates in filenames (default is '%Y-%m-%d').
-# MAGIC - **source_file_attr (str):** The attribute name in the NetCDF file for the source file information (default is 'source_file').
-# MAGIC
-# MAGIC #### Returns:
-# MAGIC - None. The function outputs the process results directly, indicating successful moves and any issues encountered.
-# MAGIC
-# MAGIC #### Description:
-# MAGIC The function initializes a Spark session and then filters and processes files that match the given criteria (prefix and date range). Each file is processed using `xarray` for data manipulation, and metadata attributes are added or updated using `netCDF4`. Files are temporarily saved and then moved to the target folder. This process is parallelized using Spark's distributed computing capabilities to enhance performance, especially with large datasets. The function concludes by outputting the results of each file processed.
-
-# COMMAND ----------
-
+##### 
 import os
 import xarray as xr
 from datetime import datetime
@@ -168,62 +108,8 @@ def spark_copy_and_move_files_by_date(start_date, end_date, source_folder, targe
     print("File processing and move complete.")
 
 
-# COMMAND ----------
 
-# MAGIC %md
-# MAGIC
-# MAGIC
-# MAGIC ## Test Class: `TestSparkCopyAndMoveFilesByDate`
-# MAGIC
-# MAGIC This test class contains unit tests for the `spark_copy_and_move_files_by_date` function. The tests use the `unittest` framework and mock objects to simulate the file system and the behavior of external libraries.
-# MAGIC
-# MAGIC ## Test Methods
-# MAGIC
-# MAGIC ### `test_spark_copy_and_move_files_by_date`
-# MAGIC
-# MAGIC This test method verifies that the `spark_copy_and_move_files_by_date` function correctly processes and moves files that match the specified date range and prefix.
-# MAGIC
-# MAGIC #### Mocks Used:
-# MAGIC - `print`: Mocked to avoid cluttering the test output.
-# MAGIC - `os.listdir`: Mocked to return a list of files that match the prefix and date range.
-# MAGIC - `shutil.move`: Mocked to simulate the file move operation.
-# MAGIC - `xarray.open_dataset`: Mocked to simulate opening and processing a NetCDF file.
-# MAGIC
-# MAGIC #### Parameters:
-# MAGIC - `start_date`: '1950-01-01'
-# MAGIC - `end_date`: '2023-12-31'
-# MAGIC - `source_folder`: Temporary directory created for the test.
-# MAGIC - `target_folder`: Temporary directory created for the test.
-# MAGIC - `prefix`: 'reanalysis-era5-sfc-daily-'
-# MAGIC - `date_pattern`: '%Y-%m-%d'
-# MAGIC - `source_file_attr`: 'source_file'
-# MAGIC
-# MAGIC #### Assertions:
-# MAGIC - Verifies that the correct files were processed and moved by checking calls to `shutil.move`.
-# MAGIC
-# MAGIC ### `test_no_files_in_date_range`
-# MAGIC
-# MAGIC This test method verifies that the `spark_copy_and_move_files_by_date` function correctly handles the case where no files match the specified date range.
-# MAGIC
-# MAGIC #### Mocks Used:
-# MAGIC - `print`: Mocked to avoid cluttering the test output.
-# MAGIC - `os.listdir`: Mocked to return a list of files that do not match the date range.
-# MAGIC
-# MAGIC #### Parameters:
-# MAGIC - `start_date`: '1950-01-01'
-# MAGIC - `end_date`: '2023-12-31'
-# MAGIC - `source_folder`: Temporary directory created for the test.
-# MAGIC - `target_folder`: Temporary directory created for the test.
-# MAGIC - `prefix`: 'reanalysis-era5-sfc-daily-'
-# MAGIC - `date_pattern`: '%Y-%m-%d'
-# MAGIC - `source_file_attr`: 'source_file'
-# MAGIC
-# MAGIC #### Assertions:
-# MAGIC - Verifies that the function completes without processing any files by checking the print output.
-# MAGIC
-
-# COMMAND ----------
-
+############## 
 import unittest
 from unittest.mock import patch, MagicMock
 import os
@@ -305,4 +191,5 @@ class TestSparkCopyAndMoveFilesByDate(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(argv=['first-arg-is-ignored'], exit=False)
+
 
