@@ -36,11 +36,9 @@ jobs:
         echo "DATABRICKS_HOST: $DATABRICKS_HOST"
         echo "DATABRICKS_TOKEN: $DATABRICKS_TOKEN"
 
-    - name: Run Databricks Notebook
-      env:
-        DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-        DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
+    - name: Debug Payload Creation
       run: |
+        echo "Creating JSON payload"
         cat <<EOF > payload.json
         {
           "run_name": "unit-test-notebook",
@@ -54,6 +52,15 @@ jobs:
           }
         }
         EOF
+        echo "Payload JSON created:"
+        cat payload.json
+
+    - name: Run Databricks Notebook
+      env:
+        DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+        DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
+      run: |
         echo "Submitting the following JSON payload:"
         cat payload.json
         databricks runs submit --json-file payload.json
+
