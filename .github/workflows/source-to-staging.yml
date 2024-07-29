@@ -28,4 +28,5 @@ jobs:
 
     - name: Run Unit Tests
       run: |
-        python unit-test.py
+        python era5-daily/00_Source_to_Staging/unit-test.py
+
