@@ -1,9 +1,9 @@
 ######
 %pip install xarray
 %pip install netCDF4 h5netcdf
-%pip install dask   
+%pip install dask
 %pip install rioxarray
-%pip install tqdm   
+%pip install tqdm 
 
 
 ###########
