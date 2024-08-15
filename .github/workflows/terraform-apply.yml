@@ -1,0 +1,46 @@
+name: "Terraform Apply"
+
+on:
+  push:
+    branches:
+      - main
+      - dev-main
+
+env:
+  CONFIG_DIRECTORY: "./cluster-creation"
+
+jobs:
+  terraform:
+    name: "Terraform Apply"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_wrapper: false
+
+      - name: Download Plan
+        uses: actions/download-artifact@v3
+        with:
+          name: terraform-plan
+          path: ${{ env.CONFIG_DIRECTORY }}
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ${{ env.CONFIG_DIRECTORY }}
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TERRAFORM_TOKEN }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+        working-directory: ${{ env.CONFIG_DIRECTORY }}
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TERRAFORM_TOKEN }}
