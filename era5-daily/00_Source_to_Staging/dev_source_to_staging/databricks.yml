@@ -1,7 +1,7 @@
-# This is a Databricks asset bundle definition for unit_tests_source_to_staging.
+# This is a Databricks asset bundle definition for dev_source_to_staging.
 # See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
 bundle:
-  name: unit_tests_source_to_staging
+  name: dev_source_to_staging
 
 include:
   - resources/*.yml

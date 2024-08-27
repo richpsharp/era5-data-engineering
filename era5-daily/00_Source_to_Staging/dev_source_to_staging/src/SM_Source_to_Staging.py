@@ -58,24 +58,45 @@ dbutils.library.restartPython()
 
 # COMMAND ----------
 
-from utils import *
+from utils import * 
 import os
-
+from pyspark.sql import SparkSession
 
 # COMMAND ----------
 
-start_date = '1950-01-01'
-end_date =  '1950-01-02'
-source_folder = '/Volumes/aer-processed/era5/daily_summary'
-target_folder = '/Volumes/pilot/bronze_test/era5_daily_summary'
-prefix = 'reanalysis-era5-sfc-daily-'
-date_pattern='%Y-%m-%d'
-source_file_attr = 'source_file'
+# Get the current workspace URL
+workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.workspaceUrl", None)
 
-copy_and_move_files_by_date(start_date, 
-                                  end_date, 
-                                  source_folder, 
-                                  target_folder, 
-                                  prefix,
-                                  date_pattern,
-                                  source_file_attr)
+# COMMAND ----------
+
+
+
+
+# Dev workspace URL
+dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
+
+# Conditional logic to set the target_folder based on the workspace URL
+if workspace_url == dev_workspace_url:
+    # If in the dev workspace, run on a small subset of the data
+    target_folder = '/Volumes/pilot/bronze_test/era5_daily_summary_dev'
+    
+    start_date = '1950-01-01'
+    end_date = '1950-01-05'
+    source_folder = '/Volumes/aer-processed/era5/daily_summary'
+    prefix = 'reanalysis-era5-sfc-daily-'
+    date_pattern = '%Y-%m-%d'
+    source_file_attr = 'source_file'
+    
+    # Run your function with the small subset of data
+    copy_and_move_files_by_date(start_date, 
+                                end_date, 
+                                source_folder, 
+                                target_folder, 
+                                prefix,
+                                date_pattern,
+                                source_file_attr)
+    
+    print("Function executed in the dev workspace on a small subset of the data.")
+else:
+    # Do not run the function if not in the dev workspace
+    print("This function is not executed in this workspace.")
