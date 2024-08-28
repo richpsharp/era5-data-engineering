@@ -1,4 +1,3 @@
-
 # The main job for staging_to_bronze.
 resources:
   jobs:
@@ -18,6 +17,20 @@ resources:
           notebook_task:
             notebook_path: ../src/01_Staging_to_Bronze.py
 
+        - task_key: data_value_check_task
+          depends_on:
+            - task_key: run_on_sample_task  # Depends on the previous notebook
+          job_cluster_key: era5_dev  # Updated job cluster key
+          notebook_task:
+            notebook_path: ../src/01_SM_Data_Value_Check.py  # Path to the new notebook
+
+        - task_key: date_range_check_task
+          depends_on:
+            - task_key: data_value_check_task  # Depends on the data value check notebook
+          job_cluster_key: era5_dev  # Updated job cluster key
+          notebook_task:
+            notebook_path: ../src/01_SM_Date_Range_Check.py  # Path to the new notebook
+
       job_clusters:
         - job_cluster_key: era5_dev  # Updated job cluster key
           new_cluster:
@@ -28,4 +41,6 @@ resources:
               max_workers: 8  # Updated maximum workers
             data_security_mode: "SINGLE_USER"  # Enforcing Single user access mode
             single_user_name: "smajumder1@ua.edu"  # Username
+
+
 
