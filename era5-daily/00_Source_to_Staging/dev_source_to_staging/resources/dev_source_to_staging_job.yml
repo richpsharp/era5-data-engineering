@@ -1,0 +1,45 @@
+resources:
+  jobs:
+    dev_source_to_staging_job:
+      name: dev_source_to_staging_job
+
+      tasks:
+        - task_key: unit_tests_task
+          job_cluster_key: era5_dev  # job cluster key
+          notebook_task:
+            notebook_path: ../tests/source-to-staging-run-unit-test.py
+
+        - task_key: run_on_sample_task
+          depends_on:
+            - task_key: unit_tests_task
+          job_cluster_key: era5_dev  # job cluster key
+          notebook_task:
+            notebook_path: ../src/SM_Source_to_Staging.py
+
+      job_clusters:
+        - job_cluster_key: era5_dev  # job cluster key
+          new_cluster:
+            spark_version: 14.3.x-scala2.12 
+            node_type_id: r5d.xlarge  
+            autoscale:
+              min_workers: 2  
+              max_workers: 8  
+            data_security_mode: "SINGLE_USER"  # Enforcing Single user access mode
+            single_user_name: "smajumder1@ua.edu"  # username
+
+
+
+      
+
+
+      
+
+
+
+
+
+
+
+
+
+
