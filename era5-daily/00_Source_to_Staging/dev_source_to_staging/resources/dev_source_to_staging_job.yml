@@ -16,6 +16,13 @@ resources:
           notebook_task:
             notebook_path: ../src/SM_Source_to_Staging.py
 
+        - task_key: data_quality_spatial_dimension_check_task
+          depends_on:
+            - task_key: run_on_sample_task  # Depends on the previous notebook
+          job_cluster_key: era5_dev  # job cluster key
+          notebook_task:
+            notebook_path: ../src/SM_Data_Quality_Spatial_Dimension_Check.py  # Path to the new notebook
+
       job_clusters:
         - job_cluster_key: era5_dev  # job cluster key
           new_cluster:
@@ -26,6 +33,7 @@ resources:
               max_workers: 8  
             data_security_mode: "SINGLE_USER"  # Enforcing Single user access mode
             single_user_name: "smajumder1@ua.edu"  # username
+
 
 
 

@@ -2,7 +2,9 @@ import os
 import xarray as xr
 from datetime import datetime
 import shutil
-import netCDF4 as nc
+import netCDF4 as nc 
+
+
 
 def copy_and_move_files_by_date(start_date, end_date, source_folder, target_folder, prefix, date_pattern='%Y-%m-%d', source_file_attr='source_file'):
     """
@@ -80,3 +82,65 @@ def copy_and_move_files_by_date(start_date, end_date, source_folder, target_fold
         print(result)
 
     print("File processing and move complete.")
+
+
+import os
+import xarray as xr
+
+def check_netcdf_files(directory, expected_lon=1440, expected_lat=721):
+    """
+    Processes NetCDF files in a specified directory, checking for expected longitude and latitude points.
+
+    Parameters
+    ----------
+    directory : str
+        Path to the directory containing NetCDF files.
+        
+    expected_lon : int, optional, default=1440
+        The expected number of longitude points in each file.
+        
+    expected_lat : int, optional, default=721
+        The expected number of latitude points in each file.
+        
+    Returns
+    -------
+    None
+        The function prints the names of files that do not meet the specified criteria.
+        If all files meet the criteria, it prints a message indicating that all files are valid.
+    """
+    
+    all_files_valid = True  # Flag to track if all files meet the criteria
+    
+    # Check if the directory exists
+    if not os.path.exists(directory):
+        print(f"Directory {directory} does not exist.")
+        return
+    
+    # Iterate over all files in the directory
+    for filename in os.listdir(directory):
+        if filename.endswith('.nc'):  # Process only NetCDF files
+            file_path = os.path.join(directory, filename)
+            try:
+                # Open the NetCDF file using xarray
+                ds = xr.open_dataset(file_path)
+                
+                # Check the dimensions of the dataset using ds.sizes
+                lon_points = ds.sizes.get('longitude', 0)
+                lat_points = ds.sizes.get('latitude', 0)
+                
+                # Print the filename if it doesn't meet the criteria
+                if lon_points != expected_lon or lat_points != expected_lat:
+                    print(f"File {filename} has {lon_points} longitude points and {lat_points} latitude points.")
+                    all_files_valid = False  # Set flag to False if any file does not meet the criteria
+                
+                # Close the dataset
+                ds.close()
+            except Exception as e:
+                print(f"Error processing file {filename}: {e}")
+                all_files_valid = False  # Set flag to False if there is an error in processing
+
+    # If all files meet the criteria, print a success message
+    if all_files_valid:
+        print("All files in the directory meet the longitude and latitude criteria.")
+
+
