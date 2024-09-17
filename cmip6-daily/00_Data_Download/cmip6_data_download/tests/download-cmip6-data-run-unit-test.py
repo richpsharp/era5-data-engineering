@@ -9,14 +9,6 @@ dbutils.library.restartPython()
 
 # COMMAND ----------
 
-# Run the unit test files
-!python unit-test_download_file.py
-!python unit-test_download_cmip6_netcdf_daily.py
-!python unit-test_download_multiple_models_daily.py
-!python unit-test_download_multiple_scenarios_daily.py
-
-# COMMAND ----------
-
 import subprocess
 
 # List of unit test commands

@@ -10,6 +10,19 @@ dbutils.library.restartPython()
 
 # COMMAND ----------
 
+import subprocess
 
-# Run the unit test files
-!python unit-test_process_shapefile_to_delta.py
+# List of unit test commands
+unit_test_commands = [
+    "python unit-test_process_shapefile_to_delta.py",
+]
+
+# Loop through each unit test command and execute it
+for command in unit_test_commands:
+    result = subprocess.run(command, shell=True)
+    
+    # If the exit code is not 0, raise an error to stop the notebook
+    if result.returncode != 0:
+        raise Exception(f"Unit test failed: {command}")
+
+print("All unit tests passed successfully.")

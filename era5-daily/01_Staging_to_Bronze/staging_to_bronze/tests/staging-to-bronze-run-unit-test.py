@@ -12,7 +12,19 @@ dbutils.library.restartPython()
 
 # COMMAND ----------
 
-# Run the unit tests
-!python unit-test_netcdf_to_bronze_autoloader.py
+import subprocess
 
+# List of unit test commands
+unit_test_commands = [
+    "python unit-test_netcdf_to_bronze_autoloader.py",
+]
 
+# Loop through each unit test command and execute it
+for command in unit_test_commands:
+    result = subprocess.run(command, shell=True)
+    
+    # If the exit code is not 0, raise an error to stop the notebook
+    if result.returncode != 0:
+        raise Exception(f"Unit test failed: {command}")
+
+print("All unit tests passed successfully.")
