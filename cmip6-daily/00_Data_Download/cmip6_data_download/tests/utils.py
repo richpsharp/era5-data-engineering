@@ -4,11 +4,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm.auto import tqdm
 
 
-
-
 def download_file(file_path, fs, output_path):
     """
-    Downloads a file from S3 and saves it locally.
+    Downloads a file from S3 and saves it locally if it doesn't already exist.
 
     Parameters
     ----------
@@ -24,6 +22,11 @@ def download_file(file_path, fs, output_path):
     Exception
         If there is an error during the file download.
     """
+    # Check if the file already exists locally
+    if os.path.exists(output_path):
+        print(f"File {output_path} already exists. Skipping download.")
+        return
+    
     try:
         with fs.open(file_path, mode='rb') as f:
             with open(output_path, 'wb') as out_file:
@@ -33,10 +36,12 @@ def download_file(file_path, fs, output_path):
         print(f"Failed to download file {file_path}: {e}")
 
 
+
 def download_cmip6_netcdf_daily(start_year, end_year, model, scenario, variables, output_folder, num_workers=None):
     """
     Downloads CMIP6 NetCDF daily files from an S3 bucket and saves them locally,
     including files with additional version strings '_v1.1' and '_v1.2' if available.
+    Skips downloading files that already exist locally.
 
     Parameters
     ----------
@@ -130,6 +135,7 @@ def download_cmip6_netcdf_daily(start_year, end_year, model, scenario, variables
             progress_bar.close()
 
     print(f"All datasets for model {model} and scenario {scenario} downloaded successfully.")
+
 
 
 def download_multiple_scenarios_daily(start_year, end_year, model, variables, scenarios, output_folder, num_workers=None, log_func=None):
