@@ -4,11 +4,12 @@
 
 # COMMAND ----------
 
+## restarting
 dbutils.library.restartPython() 
 
 # COMMAND ----------
 
-
+### importing
 from pyspark.sql import SparkSession
 import os
 import time
@@ -64,7 +65,7 @@ print(workspace_url)
 # COMMAND ----------
 
 
-#### Detecting which workspace the code is in and parameterizing in accordance with the workspace
+#### Detecting which workspace the code is in and parameterizing in accordance with the workspace ######
 
 # Check if 24 hours have passed since the last execution
 if last_execution_time is None or datetime.now() - last_execution_time >= timedelta(hours=24):
@@ -72,7 +73,7 @@ if last_execution_time is None or datetime.now() - last_execution_time >= timede
     if workspace_url == 'dbc-ad3d47af-affb.cloud.databricks.com':
         start_year = int(1950)
         end_year = int(2100)
-        models = ['ACCESS-ESM1-5', 'BCC-CSM2-MR','CanESM5']
+        models = ['ACCESS-ESM1-5', 'BCC-CSM2-MR','CanESM5','CMCC-ESM2']
         variables = ['tas','pr','tasmin','tasmax']
         scenarios = ['historical', 'ssp126', 'ssp370', 'ssp585']
         output_folder = '/Volumes/cmip6-daily-data/gwsc-cmip6-daily/nex-gddp-cmip6'
