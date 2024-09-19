@@ -63,6 +63,18 @@ dbutils.library.restartPython()
 from utils import * 
 import os
 from pyspark.sql import SparkSession
+from delta.tables import DeltaTable
+from pyspark.sql.types import StructType, StructField, StringType, TimestampType  
+
+
+from pyspark.sql.types import DateType
+from pyspark.sql.functions import to_date
+from datetime import datetime
+
+import shutil
+import xarray as xr
+import netCDF4 as nc
+
 
 # COMMAND ----------
 
@@ -71,32 +83,81 @@ workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.wo
 
 # COMMAND ----------
 
-
-
-
 # Dev workspace URL
 dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
+
+# COMMAND ----------
+
+
+
+# Conditional logic to set the target_folder and execute the Delta table check based on the workspace URL
+if workspace_url == dev_workspace_url:
+    
+    # Define the Delta table name in Databricks
+    delta_table_name = "pilot.bronze_test.era5_inventory_table"
+
+    # Define the schema (removed 'date_created')
+    table_schema = StructType([
+        StructField("date_updated", DateType(), True),
+        StructField("source_file", StringType(), True),
+        StructField("Source_File_Path", StringType(), True),
+        StructField("date_modified_in_s3", TimestampType(), True)
+    ])
+
+    # Check if the Delta table already exists
+    if spark.catalog.tableExists(delta_table_name):
+        print(f"Delta table exists: {delta_table_name}")
+        
+        # Load the Delta table
+        delta_table = DeltaTable.forName(spark, delta_table_name)
+        
+        # Get the current schema of the Delta table
+        current_schema = delta_table.toDF().schema
+        
+        # Compare the schemas (simple comparison for field names and types)
+        if current_schema != table_schema:
+            print("Schema differs, please manually adjust the schema.")
+        else:
+            print("Schema matches, no action needed.")
+    else:
+        print(f"Delta table does not exist: {delta_table_name}")
+        
+        # Create a new Delta table with the defined schema
+        empty_df = spark.createDataFrame([], table_schema)
+        empty_df.write.format("delta").saveAsTable(delta_table_name)
+        print(f"Delta table created successfully: {delta_table_name}")
+    
+else:
+    # Do not run if not in the dev workspace
+    print("This function is not executed in this workspace.")
+
+
+
+# COMMAND ----------
 
 # Conditional logic to set the target_folder based on the workspace URL
 if workspace_url == dev_workspace_url:
     # If in the dev workspace, run on a small subset of the data
     target_folder = '/Volumes/pilot/bronze_test/era5_daily_summary_dev'
+    table_name="pilot.bronze_test.era5_inventory_table"
     
     start_date = '1950-01-01'
-    end_date = '1950-01-05'
+    end_date = '1950-01-20'
     source_folder = '/Volumes/aer-processed/era5/daily_summary'
     prefix = 'reanalysis-era5-sfc-daily-'
     date_pattern = '%Y-%m-%d'
     source_file_attr = 'source_file'
     
     # Run your function with the small subset of data
-    copy_and_move_files_by_date(start_date, 
-                                end_date, 
-                                source_folder, 
-                                target_folder, 
-                                prefix,
-                                date_pattern,
-                                source_file_attr)
+    copy_and_move_files_by_date_and_keep_inventory(spark,
+                                                   start_date, 
+                                                   end_date, 
+                                                   source_folder, 
+                                                   target_folder, 
+                                                    prefix,
+                                                    table_name,
+                                                    date_pattern,
+                                                    source_file_attr)
     
     print("Function executed in the dev workspace on a small subset of the data.")
 else:

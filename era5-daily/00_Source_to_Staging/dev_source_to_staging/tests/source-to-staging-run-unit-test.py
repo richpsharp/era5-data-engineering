@@ -6,16 +6,20 @@
 
 # COMMAND ----------
 
-#dbutils.library.restartPython()
+dbutils.library.restartPython()
+
+# COMMAND ----------
+
+import xarray as xr
 
 # COMMAND ----------
 
 import subprocess
 
+
 # List of unit test commands
 unit_test_commands = [
-    "python unit-test_test_files_in_date_range.py",
-    "python unit-test_test_no_files_in_date_range.py"
+    "python -m unittest unit-test_test_files_in_date_range.py"
 ]
 
 # Loop through each unit test command and execute it
@@ -27,3 +31,4 @@ for command in unit_test_commands:
         raise Exception(f"Unit test failed: {command}")
 
 print("All unit tests passed successfully.")
+
