@@ -1,0 +1,36 @@
+# The main job for bronze_to_silver_country_indices.
+resources:
+  jobs:
+    bronze_to_silver_country_indices_job:
+      name: bronze_to_silver_country_indices_job
+
+      tasks:
+        - task_key: unit_tests_task
+          job_cluster_key: era5_dev_country_indices
+          notebook_task:
+            notebook_path: ../tests/bronze-to-silver-countryindices-run-unit-test.py 
+
+        - task_key: unit_tests_task_2
+          depends_on:
+            - task_key: unit_tests_task
+          job_cluster_key: era5_dev_country_indices  
+          notebook_task:
+            notebook_path: ../tests/df-tessellate-bronze-to-silver-countryindices-run-unit-test.py
+
+      job_clusters:
+        - job_cluster_key: era5_dev_country_indices
+          new_cluster:
+            spark_version: 13.3.x-scala2.12  # Updated Spark version
+            node_type_id: i3.4xlarge  # node type
+            runtime_engine: "PHOTON"  # Enabling Photon acceleration
+            init_scripts:
+              - workspace:
+                  destination: "/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/02_Bronze_to_Silver_Country_Indices/bronze_to_silver_country_indices/geospatial/mosaic/gdal/jammy/mosaic-gdal-init.sh"
+            autoscale:
+              min_workers: 4
+              max_workers: 8 
+            data_security_mode: "SINGLE_USER"  # Enforcing Single user access mode
+            single_user_name: "smajumder1@ua.edu"  # Username
+            tags:
+              usage: "dev-country-indices"  # Added tag for usage tracking
+
