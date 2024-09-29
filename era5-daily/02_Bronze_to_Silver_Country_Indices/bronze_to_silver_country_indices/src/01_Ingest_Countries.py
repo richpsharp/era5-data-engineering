@@ -1,4 +1,36 @@
 # Databricks notebook source
+
+# MAGIC %md
+# MAGIC ## Checking if the silver table exists
+# MAGIC
+# MAGIC **If it does then do not run the rest of the code** 
+# MAGIC
+# MAGIC **If it does then run the code**
+
+# COMMAND ----------
+
+from pyspark.sql import SparkSession
+
+# Initialize Spark session
+spark = SparkSession.builder.getOrCreate()
+
+# Define the path or table name for the Delta table
+table_name = "pilot.test_silver.esri_worldcountryboundaries_global_silver2"
+
+# Check if the Delta table exists
+if spark._jsparkSession.catalog().tableExists(table_name):
+    print(f"The Delta table '{table_name}' already exists. Skipping the rest of the notebook.")
+    
+    # Skip the rest of the notebook
+    import sys
+    sys.exit(0)
+else:
+    print(f"The Delta table '{table_name}' does not exist. Proceeding with the notebook execution.")
+
+
+# COMMAND ----------
+
+
 # MAGIC %md # [1] Ingest Countries
 # MAGIC
 # MAGIC > Data has already been downloaded into `/Volumes/gwsc/countries/shapefile` [[1](https://e2-demo-field-eng.cloud.databricks.com/explore/data/volumes/gwsc/countries/shapefile?o=1444828305810485)], originally from ESRI World Country Boundaries [[2](https://hub.arcgis.com/datasets/esri::world-countries-generalized/explore?location=-0.319193%2C-167.469317%2C1.49)].

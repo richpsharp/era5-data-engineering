@@ -1,5 +1,34 @@
 # Databricks notebook source
 # MAGIC %md
+
+# MAGIC ## Checking if the silver table exists
+# MAGIC
+# MAGIC **If it does then do not run the rest of the code**
+
+# COMMAND ----------
+
+from pyspark.sql import SparkSession
+
+# Initialize Spark session
+spark = SparkSession.builder.getOrCreate()
+
+# Define the path or table name for the Delta table
+table_name = "pilot.test_silver.esri_worldcountryboundaries_global_silver2"
+
+# Check if the Delta table exists
+if spark._jsparkSession.catalog().tableExists(table_name):
+    print(f"The Delta table '{table_name}' already exists. Skipping the rest of the notebook.")
+    
+    # Skip the rest of the notebook
+    import sys
+    sys.exit(0)
+else:
+    print(f"The Delta table '{table_name}' does not exist. Proceeding with the notebook execution.")
+
+# COMMAND ----------
+
+# MAGIC %md
+
 # MAGIC ## [2] Validate Countries
 # MAGIC
 # MAGIC > This data presents some validity issues which we will seek to identify and mitigate prior to tessellating.

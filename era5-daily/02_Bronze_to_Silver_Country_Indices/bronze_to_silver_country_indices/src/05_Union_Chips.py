@@ -1,5 +1,34 @@
 # Databricks notebook source
 # MAGIC %md
+
+# MAGIC ## Checking if the silver table exists
+# MAGIC
+# MAGIC **If it does then do not run the rest of the code**
+
+# COMMAND ----------
+
+from pyspark.sql import SparkSession
+
+# Initialize Spark session
+spark = SparkSession.builder.getOrCreate()
+
+# Define the path or table name for the Delta table
+table_name = "pilot.test_silver.esri_worldcountryboundaries_global_silver2"
+
+# Check if the Delta table exists
+if spark._jsparkSession.catalog().tableExists(table_name):
+    print(f"The Delta table '{table_name}' already exists. Skipping the rest of the notebook.")
+    
+    # Skip the rest of the notebook
+    import sys
+    sys.exit(0)
+else:
+    print(f"The Delta table '{table_name}' does not exist. Proceeding with the notebook execution.")
+
+# COMMAND ----------
+
+# MAGIC %md
+
 # MAGIC For maximum parallelism, the Ingest notebook split all multipolygons into just polygons. Then the Tessellate notebooke tessellated each polygon separately. Therefore, two chips of a country might lie in the same cell: imagine two nearby islands, or an island just off shore of primary land.
 # MAGIC
 # MAGIC It's easier to work with a tessellation of a country if (a) each H3 cell in the tessellation occurs just once and (b) includes all the chips of that country within that cell's boundary. Below, we use `mos.st_union_agg()` to union all the chips within each country's cells.
