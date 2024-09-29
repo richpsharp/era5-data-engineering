@@ -1,0 +1,38 @@
+# The main job for bronze_to_silver_approximate_join
+resources:
+  jobs:
+    bronze_to_silver_approximate_join_job:
+      name: bronze_to_silver_approximate_join_job
+
+      tasks:
+        - task_key: unit_tests_task
+          job_cluster_key: era5_dev_country_join  # job cluster key
+          notebook_task:
+            notebook_path: ../tests/bronze-to-silver-approximate-join-run-unit-test.py
+
+        - task_key: run_on_sample_task
+          depends_on:
+            - task_key: unit_tests_task
+          job_cluster_key: era5_dev_country_join  # job cluster key
+          notebook_task:
+            notebook_path: ../src/02_HK_SM_Bronze_to_Silver_era5_country_approximate_join_autoloader.py
+
+      job_clusters:
+        - job_cluster_key: era5_dev_country_join  # job cluster key
+          new_cluster:
+            spark_version: 13.3.x-scala2.12  # Updated Spark version
+            node_type_id: i3.xlarge  # node type
+            runtime_engine: "PHOTON"  # Enabling Photon acceleration
+            init_scripts:
+              - workspace:
+                  destination: "/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/02_Bronze_to_Silver_Approximate_Join/bronze_to_silver_approximate_join/geospatial/mosaic/gdal/jammy/mosaic-gdal-init.sh"
+            autoscale:
+              min_workers: 2  # Updated minimum workers
+              max_workers: 8  # Updated maximum workers
+            data_security_mode: "SINGLE_USER"  # Enforcing Single user access mode
+            single_user_name: "smajumder1@ua.edu"  # Username 
+
+
+            
+            
+
