@@ -33,6 +33,8 @@ resources:
               max_workers: 8  
             data_security_mode: "SINGLE_USER"  # Enforcing Single user access mode
             single_user_name: "smajumder1@ua.edu"  # username
+            
+            
 
 
 
