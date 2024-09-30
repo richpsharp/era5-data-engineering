@@ -1,6 +1,6 @@
 # This workflow validates, deploys, and runs the specified bundle
 # within a pre-production target named "dev".
-name: "bronze_to_silver_approximate_join_job"
+name: "bronze_to_silver_strict_join_job"
 
 on:
   pull_request:
@@ -24,7 +24,7 @@ jobs:
           echo "Listing all files in the working directory:"
           ls -R
       - run: databricks bundle deploy
-        working-directory: ./era5-daily/02_Bronze_to_Silver_Approximate_Join/bronze_to_silver_approximate_join
+        working-directory: ./era5-daily/02_Bronze_to_Silver_Strict_Join/bronze_to_silver_strict_join
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
@@ -43,8 +43,8 @@ jobs:
       - run: |
           echo "Listing all files in the working directory:"
           ls -R
-      - run: databricks bundle run  bronze_to_silver_approximate_join_job --refresh-all
-        working-directory: ./era5-daily/02_Bronze_to_Silver_Approximate_Join/bronze_to_silver_approximate_join
+      - run: databricks bundle run  bronze_to_silver_strict_join_job --refresh-all
+        working-directory: ./era5-daily/02_Bronze_to_Silver_Strict_Join/bronze_to_silver_strict_join
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev

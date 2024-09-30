@@ -89,8 +89,8 @@ spark.conf.set("spark.sql.shuffle.partitions", 32)                 # <-- default
 ################
 
 
-def bronze_to_silver_era5_country_approximate_autoloader(bronze_era5_table,country_index_table,lat_col,
-                                                         lon_col,target_resolution,join_type):  
+def bronze_to_silver_era5_country_strict_autoloader(bronze_era5_table,country_index_table,lat_col,
+                                                     lon_col,target_resolution,join_type):  
     
     
     
@@ -103,26 +103,42 @@ def bronze_to_silver_era5_country_approximate_autoloader(bronze_era5_table,count
                 h3_longlatash3(col(lon_col),
                                 col(lat_col), # h3_ functions support Photon; not all st_ functions do
                                 lit(target_resolution)))
-    .alias("era5"))
+    .alias("era5")) 
 
 
     country_index = (
     spark.table(country_index_table)
     .alias("country_index")
-    .select("grid_index", "country") # Keep only columns we need
-    .dropDuplicates())
+    .select("grid_index", "country", "chip_is_core", "chip_wkb"))
 
-    # The join condition requires that the cell of the means matches a cell of the country,
-    join_condition = [country_index.grid_index == bronze_era5_new.grid_index]
+
+    # The join condition requires that the cell of the point matches a cell of the country,
+    # The WHERE clause requires EITHER (1) the cell is definitely inside the country, OR (2) the point is in the chip of the cell that is inside the country.
+    # Testing point-inclusion for just the small chips that might be on the border is faster than checking inclusion for the whole country.
+    join_condition = [
+        country_index.grid_index == bronze_era5_new.grid_index, # AND...
+        col("chip_is_core") | # OR ...
+        mos.st_contains(
+            col("chip_wkb"),
+            mos.st_point( # st_contains requires longitude in [-180, 180)
+                when(col(lon_col).cast('double') >= 180, col(lon_col).cast('double') - lit(360))
+                    .otherwise(col(lon_col).cast('double')),
+                col(lat_col).cast('double')))
+        ]
 
     era5_changeset = (
         bronze_era5_new
         .join(country_index, join_condition, join_type)
         # Choose final columns using the dataframe aliases from above.
-        .select("era5.*", "country_index.country")) 
+        .select("era5.*", "country_index.country", "country_index.chip_wkb")
+        .withColumnRenamed("country", "country_strict")
+        .withColumnRenamed("chip_wkb", "country_chip_wkb")
+        )   
     
     return era5_changeset
     
+
+
 
 
 
@@ -134,34 +150,23 @@ def bronze_to_silver_era5_country_approximate_autoloader(bronze_era5_table,count
 
 
 def merge_era5_with_silver(changeset_df, batch_id):
-    deltaSilverTable = DeltaTable.forName(spark, target_silver_table)
     # To ensure we apply only the latest updates in a batch,
     # for each key, we choose the record with the latest sequence value.
-    # For this dedup, we must add "country" to the key, because we allow
-    # two records to differ only by the country.
     # Note that null sequence values sort last with ORDER BY ... DESC
-    window = Window.partitionBy(silver_merge_keys + ["country"]).orderBy(desc(sequence_col))
+    window = Window.partitionBy(silver_merge_keys).orderBy(desc(sequence_col))
     changeset_latest = (
         changeset_df.withColumn("row_num", row_number().over(window))
         .filter("row_num = 1")
         .drop("row_num")
-    )   
-    # Delete matching rows
-    # To prevent out-of-order processing, we delete only if the sequence
+    )
+    # To prevent out-of-order processing, we update only if the sequence
     # value of the incoming record is greater than the existing record.
-    deduped_changeset_df = changeset_df.dropDuplicates(silver_merge_keys)
+    deltaSilverTable = DeltaTable.forName(spark, target_silver_table)    
     deltaSilverTable.alias("t").merge(
-        deduped_changeset_df.alias("c"),
+        changeset_df.alias("c"),
         silver_merge_condition) \
-    .whenMatchedDelete(
-        f"t.{sequence_col} IS NULL OR c.{sequence_col} > t.{sequence_col}"
-        ).execute()
-    # Insert changeset of latest changes. We use merge again because
-    # it's more flexible than df.write.insertInto or INSERT,
-    # and we can avoid inserting if records already exist.
-    deltaSilverTable.alias("t").merge(
-        changeset_latest.alias("c"),
-        silver_merge_condition) \
+    .whenMatchedUpdateAll(
+        f"t.{sequence_col} IS NULL OR c.{sequence_col} > t.{sequence_col}") \
     .whenNotMatchedInsertAll() \
     .execute()
 
@@ -183,9 +188,9 @@ dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
 if workspace_url == dev_workspace_url:
     # Set the parameters for the dev workspace
     bronze_era5_table = "pilot.bronze_test.aer_era5_bronze_1950_to_present_test"
-    target_silver_table = "pilot.test_silver.aer_era5_silver_approximate_1950_to_present_test"
+    target_silver_table = "pilot.test_silver.aer_era5_silver_strict_1950_to_present_test"
     country_index_table = "pilot.test_silver.esri_worldcountryboundaries_global_silver2"
-    checkpoint = "/Volumes/pilot/test_silver/checkpoints/era5_silver_country_approximate_dev"
+    checkpoint = "/Volumes/pilot/test_silver/checkpoints/era5_silver_country_strict_dev"
 
     ### Latitude column of the bronze table
     lat_col = "latitude"
@@ -207,12 +212,11 @@ if workspace_url == dev_workspace_url:
     # E.g. "t.time = c.time and t.latitude = c.latitude and t.longitude = c.longitude"
     silver_merge_condition = (" and ").join(
         [f"t.{column} = c.{column}"
-        for column in silver_merge_keys]
-    )
+        for column in silver_merge_keys])
     print("Merge condition:", silver_merge_condition)
 
     # Run the function in the dev workspace
-    era5_changeset = bronze_to_silver_era5_country_approximate_autoloader(
+    era5_changeset = bronze_to_silver_era5_country_strict_autoloader(
         bronze_era5_table,
         country_index_table,
         lat_col,
@@ -237,35 +241,23 @@ if workspace_url == dev_workspace_url:
             Ingest_Timestamp TIMESTAMP,
             data_provider STRING,
             grid_index BIGINT,
-            country STRING,
+            country_strict STRING,
+            country_chip_wkb BINARY,
             {sequence_col} timestamp)
         USING delta
         CLUSTER BY ({",".join(silver_merge_keys)})
     """)
 
     # Write the stream into the table with merge and schema evolution
-    write_stream = (
-        era5_changeset
-        .writeStream
-        .format("delta")
-        .option("mergeSchema", "true")  # Enable schema evolution
-        .option("checkpointLocation", checkpoint)
-        .foreachBatch(lambda batch_df, batch_id: (
-            DeltaTable.forName(spark, target_silver_table)
-            .alias("t")
-            .merge(
-                batch_df.alias("c"),
-                silver_merge_condition
-            )
-            .whenMatchedUpdateAll()
-            .whenNotMatchedInsertAll()
-            .execute()
-        ))
-        .trigger(availableNow=True)
-        .start()
+    write_stream = (era5_changeset
+    .writeStream
+    .foreachBatch(merge_era5_with_silver)
+    .trigger(availableNow=True)
+    .option("checkpointLocation", checkpoint)
+    .outputMode("update")
+    .start()
     )
-
-    write_stream.awaitTermination()  # Keeps later cells from running until the stream is done
+    write_stream.awaitTermination()
 
     print("Function executed in the dev workspace on a small subset of the data.")
 else:
