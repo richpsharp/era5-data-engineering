@@ -6,33 +6,33 @@ resources:
 
       tasks:
         - task_key: unit_tests_task
-          job_cluster_key: era5_dev  # Updated job cluster key
+          job_cluster_key: era5_dev_staging_to_bronze  # Updated job cluster key
           notebook_task:
             notebook_path: ../tests/staging-to-bronze-run-unit-test.py
 
         - task_key: run_on_sample_task
           depends_on:
             - task_key: unit_tests_task
-          job_cluster_key: era5_dev  # Updated job cluster key
+          job_cluster_key: era5_dev_staging_to_bronze  # Updated job cluster key
           notebook_task:
             notebook_path: ../src/01_Staging_to_Bronze.py
 
         - task_key: data_value_check_task
           depends_on:
             - task_key: run_on_sample_task  # Depends on the previous notebook
-          job_cluster_key: era5_dev  # Updated job cluster key
+          job_cluster_key: era5_dev_staging_to_bronze  # Updated job cluster key
           notebook_task:
             notebook_path: ../src/01_SM_Data_Value_Check.py  # Path to the new notebook
 
         - task_key: date_range_check_task
           depends_on:
             - task_key: data_value_check_task  # Depends on the data value check notebook
-          job_cluster_key: era5_dev  # Updated job cluster key
+          job_cluster_key: era5_dev_staging_to_bronze  # Updated job cluster key
           notebook_task:
             notebook_path: ../src/01_SM_Date_Range_Check.py  # Path to the new notebook
 
       job_clusters:
-        - job_cluster_key: era5_dev  # Updated job cluster key
+        - job_cluster_key: era5_dev_staging_to_bronze  # Updated job cluster key
           new_cluster:
             spark_version: 14.3.x-scala2.12  # Updated Spark version
             node_type_id: r5d.xlarge  # Updated node type

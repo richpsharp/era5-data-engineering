@@ -7,20 +7,20 @@ resources:
 
       tasks:
         - task_key: unit_tests_task
-          job_cluster_key: cmip6_dev  # job cluster key
+          job_cluster_key: cmip6_dev_data_download  # job cluster key
           notebook_task:
             notebook_path: ../tests/download-cmip6-data-run-unit-test.py
 
         - task_key: run_on_sample_task
           depends_on:
             - task_key: unit_tests_task
-          job_cluster_key: cmip6_dev  # job cluster key
+          job_cluster_key: cmip6_dev_data_download  # job cluster key
           notebook_task:
             notebook_path: ../src/00_Download_cmip6_data.py
 
 
       job_clusters:
-        - job_cluster_key: cmip6_dev
+        - job_cluster_key: cmip6_dev_data_download
           new_cluster:
             spark_version: 14.3.x-scala2.12   # Updated Spark version
             node_type_id: m5d.4xlarge  # Updated node type

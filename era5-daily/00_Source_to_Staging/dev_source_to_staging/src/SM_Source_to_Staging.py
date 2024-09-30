@@ -142,7 +142,7 @@ if workspace_url == dev_workspace_url:
     table_name="pilot.bronze_test.era5_inventory_table"
     
     start_date = '1950-01-01'
-    end_date = '1950-01-20'
+    end_date = '1950-01-30'
     source_folder = '/Volumes/aer-processed/era5/daily_summary'
     prefix = 'reanalysis-era5-sfc-daily-'
     date_pattern = '%Y-%m-%d'

@@ -6,19 +6,19 @@ resources:
 
       tasks:
         - task_key: unit_tests_task
-          job_cluster_key: era5_dev_country_join  # job cluster key
+          job_cluster_key: era5_dev_approximate_join  # job cluster key
           notebook_task:
             notebook_path: ../tests/bronze-to-silver-approximate-join-run-unit-test.py
 
         - task_key: run_on_sample_task
           depends_on:
             - task_key: unit_tests_task
-          job_cluster_key: era5_dev_country_join  # job cluster key
+          job_cluster_key: era5_dev_approximate_join  # job cluster key
           notebook_task:
             notebook_path: ../src/02_HK_SM_Bronze_to_Silver_era5_country_approximate_join_autoloader.py
 
       job_clusters:
-        - job_cluster_key: era5_dev_country_join  # job cluster key
+        - job_cluster_key: era5_dev_approximate_join  # job cluster key
           new_cluster:
             spark_version: 13.3.x-scala2.12  # Updated Spark version
             node_type_id: i3.xlarge  # node type

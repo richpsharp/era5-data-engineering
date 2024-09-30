@@ -6,19 +6,19 @@ resources:
 
       tasks:
         - task_key: unit_tests_task
-          job_cluster_key: era5_dev
+          job_cluster_key: era5_dev_country_boundaries
           notebook_task:
             notebook_path: ../tests/source_to_bronze_countryboundaries_run-unit-test.py
 
         - task_key: run_on_sample_task
           depends_on:
             - task_key: unit_tests_task
-          job_cluster_key: era5_dev 
+          job_cluster_key: era5_dev_country_boundaries 
           notebook_task:
             notebook_path: ../src/01_Source_to_Bronze_Country_Boundaries.py
 
       job_clusters:
-        - job_cluster_key: era5_dev
+        - job_cluster_key: era5_dev_country_boundaries 
           new_cluster:
             spark_version: 15.1.x-scala2.12  # Keeping the original Spark version
             node_type_id: r6id.xlarge  # node type
