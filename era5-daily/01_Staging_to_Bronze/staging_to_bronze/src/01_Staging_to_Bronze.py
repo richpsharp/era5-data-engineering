@@ -1,6 +1,5 @@
 # Databricks notebook source
-# MAGIC
-# MAGIC %pip install numpy==1.26.4 ## please use this version of numpy ## DO NOT USE THE LATEST VERSION
+# MAGIC %pip install numpy==1.26.4 #### please use this version of numpy ## DO NOT USE THE LATEST VERSION
 # MAGIC %pip install xarray
 # MAGIC %pip install netCDF4 h5netcdf
 
