@@ -4,18 +4,21 @@ name: "Combined ERA5 Workflow"
 
 on:
   pull_request:
+    types:
+      - opened
+      - synchronize
     branches:
       - dev-main
 
 jobs:
-  # Job 1: dev_source_to_staging_job
-  deploy_source_to_staging:
-    name: "Deploy dev_source_to_staging_job"
+  # Job 1: era5_dev_source_to_staging_job
+  deploy_era5_source_to_staging:
+    name: "Deploy era5_dev_source_to_staging_job"
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v1
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -23,32 +26,32 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
 
-  run_source_to_staging:
-    name: "Run dev_source_to_staging_job"
+  run_era5_source_to_staging:
+    name: "Run era5_dev_source_to_staging_job"
     runs-on: ubuntu-latest
     needs:
-      - deploy_source_to_staging
+      - deploy_era5_source_to_staging
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v1
 
-      - run: databricks bundle run dev_source_to_staging_job --refresh-all
+      - run: databricks bundle run era5_dev_source_to_staging_job --refresh-all
         working-directory: ./era5-daily/Combined_Run/combined_run
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
 
-  # Job 2: dev_source_to_bronze_country_boundaries_job
-  deploy_source_to_bronze_country_boundaries:
-    name: "Deploy dev_source_to_bronze_country_boundaries_job"
+  # Job 2: era5_dev_source_to_bronze_country_boundaries_job
+  deploy_era5_source_to_bronze_country_boundaries:
+    name: "Deploy era5_dev_source_to_bronze_country_boundaries_job"
     runs-on: ubuntu-latest
     needs:
-      - run_source_to_staging
+      - run_era5_source_to_staging
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v1
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -56,32 +59,32 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
 
-  run_source_to_bronze_country_boundaries:
-    name: "Run dev_source_to_bronze_country_boundaries_job"
+  run_era5_source_to_bronze_country_boundaries:
+    name: "Run era5_dev_source_to_bronze_country_boundaries_job"
     runs-on: ubuntu-latest
     needs:
-      - deploy_source_to_bronze_country_boundaries
+      - deploy_era5_source_to_bronze_country_boundaries
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v1
 
-      - run: databricks bundle run dev_source_to_bronze_country_boundaries_job --refresh-all
+      - run: databricks bundle run era5_dev_source_to_bronze_country_boundaries_job --refresh-all
         working-directory: ./era5-daily/Combined_Run/combined_run
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
 
-  # Job 3: dev_staging_to_bronze_job
-  deploy_staging_to_bronze:
-    name: "Deploy dev_staging_to_bronze_job"
+  # Job 3: era5_dev_staging_to_bronze_job
+  deploy_era5_staging_to_bronze:
+    name: "Deploy era5_dev_staging_to_bronze_job"
     runs-on: ubuntu-latest
     needs:
-      - run_source_to_bronze_country_boundaries
+      - run_era5_source_to_bronze_country_boundaries
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v1
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -89,32 +92,32 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
 
-  run_staging_to_bronze:
-    name: "Run dev_staging_to_bronze_job"
+  run_era5_staging_to_bronze:
+    name: "Run era5_dev_staging_to_bronze_job"
     runs-on: ubuntu-latest
     needs:
-      - deploy_staging_to_bronze
+      - deploy_era5_staging_to_bronze
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v1
 
-      - run: databricks bundle run dev_staging_to_bronze_job --refresh-all
+      - run: databricks bundle run era5_dev_staging_to_bronze_job --refresh-all
         working-directory: ./era5-daily/Combined_Run/combined_run
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
 
-  # Job 4: bronze_to_silver_country_indices_job
-  deploy_bronze_to_silver_country_indices:
-    name: "Deploy bronze_to_silver_country_indices_job"
+  # Job 4: era5_bronze_to_silver_country_indices_job
+  deploy_era5_bronze_to_silver_country_indices:
+    name: "Deploy era5_bronze_to_silver_country_indices_job"
     runs-on: ubuntu-latest
     needs:
-      - run_staging_to_bronze
+      - run_era5_staging_to_bronze
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v1
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -122,32 +125,32 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
 
-  run_bronze_to_silver_country_indices:
-    name: "Run bronze_to_silver_country_indices_job"
+  run_era5_bronze_to_silver_country_indices:
+    name: "Run era5_bronze_to_silver_country_indices_job"
     runs-on: ubuntu-latest
     needs:
-      - deploy_bronze_to_silver_country_indices
+      - deploy_era5_bronze_to_silver_country_indices
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v1
 
-      - run: databricks bundle run bronze_to_silver_country_indices_job --refresh-all
+      - run: databricks bundle run era5_bronze_to_silver_country_indices_job --refresh-all
         working-directory: ./era5-daily/Combined_Run/combined_run
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
 
-  # Job 5: bronze_to_silver_approximate_join_job
-  deploy_bronze_to_silver_approximate_join:
-    name: "Deploy bronze_to_silver_approximate_join_job"
+  # Job 5: era5_bronze_to_silver_approximate_join_job
+  deploy_era5_bronze_to_silver_approximate_join:
+    name: "Deploy era5_bronze_to_silver_approximate_join_job"
     runs-on: ubuntu-latest
     needs:
-      - run_bronze_to_silver_country_indices
+      - run_era5_bronze_to_silver_country_indices
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v1
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -155,32 +158,32 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
 
-  run_bronze_to_silver_approximate_join:
-    name: "Run bronze_to_silver_approximate_join_job"
+  run_era5_bronze_to_silver_approximate_join:
+    name: "Run era5_bronze_to_silver_approximate_join_job"
     runs-on: ubuntu-latest
     needs:
-      - deploy_bronze_to_silver_approximate_join
+      - deploy_era5_bronze_to_silver_approximate_join
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v1
 
-      - run: databricks bundle run bronze_to_silver_approximate_join_job --refresh-all
+      - run: databricks bundle run era5_bronze_to_silver_approximate_join_job --refresh-all
         working-directory: ./era5-daily/Combined_Run/combined_run
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
 
-  # Job 6: bronze_to_silver_strict_join_job
-  deploy_bronze_to_silver_strict_join:
-    name: "Deploy bronze_to_silver_strict_join_job"
+  # Job 6: era5_bronze_to_silver_strict_join_job
+  deploy_era5_bronze_to_silver_strict_join:
+    name: "Deploy era5_bronze_to_silver_strict_join_job"
     runs-on: ubuntu-latest
     needs:
-      - run_bronze_to_silver_approximate_join
+      - run_era5_bronze_to_silver_approximate_join
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v1
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -188,17 +191,17 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
 
-  run_bronze_to_silver_strict_join:
-    name: "Run bronze_to_silver_strict_join_job"
+  run_era5_bronze_to_silver_strict_join:
+    name: "Run era5_bronze_to_silver_strict_join_job"
     runs-on: ubuntu-latest
     needs:
-      - deploy_bronze_to_silver_strict_join
+      - deploy_era5_bronze_to_silver_strict_join
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v1
 
-      - run: databricks bundle run bronze_to_silver_strict_join_job --refresh-all
+      - run: databricks bundle run era5_bronze_to_silver_strict_join_job --refresh-all
         working-directory: ./era5-daily/Combined_Run/combined_run
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
