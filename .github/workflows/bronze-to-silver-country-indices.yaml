@@ -1,62 +1,49 @@
-# GitHub Actions Workflow for bronze_to_silver_country_indices_job
-
-name: "Bronze to Silver Country Indices Workflow"
+# This workflow validates, deploys, and runs the specified bundle
+# within a pre-production target named "dev".
+name: "bronze_to_silver_country_indices_job"
 
 on:
   pull_request:
+    types:
+      - opened
+      - synchronize
     branches:
       - dev-main
 
 jobs:
-  deploy_bronze_to_silver_country_indices:
-    name: "Deploy Bronze to Silver Country Indices Job"
+  deploy:
+    name: "Deploy bundle"
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
       - uses: databricks/setup-cli@main
 
+      # Add this step to list all files and directories recursively
+      - run: |
+          echo "Listing all files in the working directory:"
+          ls -R
       - run: databricks bundle deploy
         working-directory: ./era5-daily/02_Bronze_to_Silver_Country_Indices/bronze_to_silver_country_indices
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
 
-  run_bronze_to_silver_country_indices:
-    name: "Run Bronze to Silver Country Indices Job"
+  pipeline_update:
+    name: "Run pipeline update"
     runs-on: ubuntu-latest
     needs:
-      - deploy_bronze_to_silver_country_indices
+      - deploy
 
     steps:
       - uses: actions/checkout@v3
       - uses: databricks/setup-cli@main
 
+      # Add this step to list all files and directories recursively before running the bundle
       - run: |
-          databricks jobs run-now --job-id bronze_to_silver_country_indices_job --notebook-params '
-          {
-            "unit_tests_task": {
-              "notebook_path": "../tests/bronze-to-silver-countryindices-run-unit-test.py"
-            },
-            "unit_tests_task_2": {
-              "notebook_path": "../tests/df-tessellate-bronze-to-silver-countryindices-run-unit-test.py"
-            },
-            "ingest_countries": {
-              "notebook_path": "../src/01_Ingest_Countries.py"
-            },
-            "validate_countries": {
-              "notebook_path": "../src/02_Validate_Countries.py"
-            },
-            "tessellate_countries": {
-              "notebook_path": "../src/03_Tessellate_Countries.py"
-            },
-            "viz_countries": {
-              "notebook_path": "../src/04_Viz_Countries.py"
-            },
-            "union_chips": {
-              "notebook_path": "../src/05_Union_Chips.py"
-            }
-          }'
+          echo "Listing all files in the working directory:"
+          ls -R
+      - run: databricks bundle run  bronze_to_silver_country_indices_job --refresh-all
         working-directory: ./era5-daily/02_Bronze_to_Silver_Country_Indices/bronze_to_silver_country_indices
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
