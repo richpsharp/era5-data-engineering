@@ -17,8 +17,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Check out this repo, so that this workflow can access it.
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@v1
+      # Download the Databricks CLI.
+      # See https://github.com/databricks/setup-cli
+      - uses: databricks/setup-cli@main
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -34,7 +37,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@v1
+      # Download the Databricks CLI.
+      # See https://github.com/databricks/setup-cli
+      - uses: databricks/setup-cli@main
 
       - run: databricks bundle run era5_dev_source_to_staging_job --refresh-all
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -51,7 +56,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@v1
+      # Download the Databricks CLI.
+      # See https://github.com/databricks/setup-cli
+      - uses: databricks/setup-cli@main
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -67,7 +74,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@v1
+      # Download the Databricks CLI.
+      # See https://github.com/databricks/setup-cli
+      - uses: databricks/setup-cli@main
 
       - run: databricks bundle run era5_dev_source_to_bronze_country_boundaries_job --refresh-all
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -84,7 +93,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@v1
+      # Download the Databricks CLI.
+      # See https://github.com/databricks/setup-cli
+      - uses: databricks/setup-cli@main
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -100,7 +111,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@v1
+      # Download the Databricks CLI.
+      # See https://github.com/databricks/setup-cli
+      - uses: databricks/setup-cli@main
 
       - run: databricks bundle run era5_dev_staging_to_bronze_job --refresh-all
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -117,7 +130,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@v1
+      # Download the Databricks CLI.
+      # See https://github.com/databricks/setup-cli
+      - uses: databricks/setup-cli@main
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -133,7 +148,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@v1
+      # Download the Databricks CLI.
+      # See https://github.com/databricks/setup-cli
+      - uses: databricks/setup-cli@main
 
       - run: databricks bundle run era5_bronze_to_silver_country_indices_job --refresh-all
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -150,7 +167,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@v1
+      # Download the Databricks CLI.
+      # See https://github.com/databricks/setup-cli
+      - uses: databricks/setup-cli@main
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -166,7 +185,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@v1
+      # Download the Databricks CLI.
+      # See https://github.com/databricks/setup-cli
+      - uses: databricks/setup-cli@main
 
       - run: databricks bundle run era5_bronze_to_silver_approximate_join_job --refresh-all
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -183,7 +204,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@v1
+      # Download the Databricks CLI.
+      # See https://github.com/databricks/setup-cli
+      - uses: databricks/setup-cli@main
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run/combined_run
@@ -199,7 +222,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: databricks/setup-cli@v1
+      # Download the Databricks CLI.
+      # See https://github.com/databricks/setup-cli
+      - uses: databricks/setup-cli@main
 
       - run: databricks bundle run era5_bronze_to_silver_strict_join_job --refresh-all
         working-directory: ./era5-daily/Combined_Run/combined_run
