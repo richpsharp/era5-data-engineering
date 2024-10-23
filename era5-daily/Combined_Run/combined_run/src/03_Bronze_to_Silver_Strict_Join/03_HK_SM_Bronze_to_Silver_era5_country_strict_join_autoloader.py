@@ -84,6 +84,33 @@ spark.conf.set("spark.sql.shuffle.partitions", 32)                 # <-- default
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ### bronze_to_silver_era5_country_strict_autoloader Function
+# MAGIC
+# MAGIC This function performs a strict spatial join between ERA5 climate data and country boundary data using H3 indexing and precise point-in-polygon checks. The key steps are as follows:
+# MAGIC
+# MAGIC - **Input Parameters**:
+# MAGIC   - `bronze_era5_table`: Name of the ERA5 bronze table containing climate data.
+# MAGIC   - `country_index_table`: Table containing H3 grid index and country boundary data.
+# MAGIC   - `lat_col`, `lon_col`: Latitude and longitude columns from the ERA5 table.
+# MAGIC   - `target_resolution`: H3 resolution level for spatial indexing.
+# MAGIC   - `join_type`: Type of join to perform (e.g., `left` join).
+# MAGIC
+# MAGIC - **Streaming New Records**:
+# MAGIC   - The function reads new records from the ERA5 bronze table as a streaming dataframe and calculates an H3 `grid_index` for each record using the latitude and longitude columns.
+# MAGIC
+# MAGIC - **Country Index Preparation**:
+# MAGIC   - It reads the country index table, which contains precomputed `grid_index` values and boundary information (e.g., `chip_is_core` and `chip_wkb`).
+# MAGIC
+# MAGIC - **Join Condition**:
+# MAGIC   - The join condition first checks if the H3 `grid_index` of the ERA5 record matches that of the country boundary. It then further refines the check by ensuring the point is either inside the core of the country cell or inside the boundary chip using `st_contains`.
+# MAGIC
+# MAGIC - **Output**:
+# MAGIC   - The function returns a dataframe with ERA5 records joined with corresponding country information. The columns `country_strict` and `country_chip_wkb` hold the country and chip boundary data for each record.
+# MAGIC
+
+# COMMAND ----------
+
 ####################
 ### DEFINING A FUNCTION HERE TO AVOID SPARK NOT DEFINED ERROR
 ################
@@ -144,6 +171,32 @@ def bronze_to_silver_era5_country_strict_autoloader(bronze_era5_table,country_in
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ### merge_era5_with_silver Function
+# MAGIC
+# MAGIC This function merges incoming ERA5 climate data changes with the existing Silver-tier Delta table. It ensures that only the most recent updates are applied to the Silver table, maintaining data integrity. The key steps are as follows:
+# MAGIC
+# MAGIC - **Input Parameters**:
+# MAGIC   - `changeset_df`: The dataframe containing new ERA5 records or changes.
+# MAGIC   - `batch_id`: The batch identifier for the streaming job (used in the `foreachBatch` operation).
+# MAGIC
+# MAGIC - **Window for Latest Records**:
+# MAGIC   - The function defines a window to partition the data by the `silver_merge_keys` (e.g., `time`, `latitude`, `longitude`) and `country`, ordering by the `sequence_col` in descending order. This allows it to select the most recent record for each unique combination of keys.
+# MAGIC
+# MAGIC - **Filter Latest Changes**:
+# MAGIC   - It filters the dataframe to retain only the latest record for each partition, using the `row_number()` function to keep the record with the highest `sequence_col` value.
+# MAGIC
+# MAGIC - **Merge Logic**:
+# MAGIC   - The function merges the deduplicated changeset into the Silver table using the `merge` function.
+# MAGIC   - **When Matched**: Updates existing rows where the incoming record's `sequence_col` is greater than or equal to the current record.
+# MAGIC   - **When Not Matched**: Inserts new records from the changeset into the Silver table if they do not already exist.
+# MAGIC
+# MAGIC - **Flexible Update**:
+# MAGIC   - The use of `whenMatchedUpdateAll()` ensures that all columns are updated if a match is found, and `whenNotMatchedInsertAll()` inserts new records if no match is found.
+# MAGIC
+
+# COMMAND ----------
+
 ####################
 ### DEFINING A FUNCTION HERE TO AVOID SPARK NOT DEFINED ERROR
 ################
@@ -174,6 +227,34 @@ def merge_era5_with_silver(changeset_df, batch_id):
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ### Conditional Execution and Table Setup
+# MAGIC
+# MAGIC This code block configures the necessary parameters and functions for processing ERA5 climate data, depending on the workspace environment. 
+# MAGIC
+# MAGIC - **Workspace URL Check**:
+# MAGIC   - The script checks the current workspace's URL to see if it is the development environment (`dev_workspace_url`). If it matches, the following configurations are applied.
+# MAGIC
+# MAGIC - **Key Parameters**:
+# MAGIC   - `bronze_era5_table`: Name of the table containing ERA5 climate data in the bronze tier.
+# MAGIC   - `target_silver_table`: Name of the Silver-tier Delta table where the processed data will be stored.
+# MAGIC   - `country_index_table`: Table containing the country boundary data indexed by H3 spatial resolution.
+# MAGIC   - `lat_col` and `lon_col`: Columns for latitude and longitude in the data, used for spatial joins.
+# MAGIC   - `target_resolution`: H3 grid resolution for spatial indexing (set to 5).
+# MAGIC   - `sequence_col`: Timestamp column used to track the creation time for records.
+# MAGIC   - `silver_merge_keys`: The keys used to uniquely identify and update records in the Silver table, consisting of `time`, `latitude`, and `longitude`.
+# MAGIC
+# MAGIC - **Silver Table Merge Condition**:
+# MAGIC   - The `silver_merge_condition` string is built by joining the key columns with equality conditions, forming the merge logic that allows for proper updates during streaming.
+# MAGIC
+# MAGIC - **Table Schema Setup**:
+# MAGIC   - The code checks if the Silver-tier Delta table exists. If it doesn't, the table is created with the defined schema, including ERA5 data columns like temperature, precipitation, and country information.
+# MAGIC
+# MAGIC - **Streaming Data Write**:
+# MAGIC   - The `write_stream` process handles the streaming data from the ERA5 bronze tier. It writes the results to the Silver-tier table using schema evolution and merge conditions.
+# MAGIC   - The `foreachBatch` operation applies the `merge_era5_with_silver()` function to each batch of incoming data, ensuring that updates are applied efficiently.
+# MAGIC
+# MAGIC - **Execution Logic**:
+# MAGIC   - The function runs only in the development workspace. If the workspace does not match `dev_workspace_url`, the script exits without executing the function.
 # MAGIC
 
 # COMMAND ----------
