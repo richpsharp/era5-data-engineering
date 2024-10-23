@@ -1,20 +1,52 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC %md
-# MAGIC # Handling and Processing Climate Data with PySpark and NetCDF
 # MAGIC
-# MAGIC This notebook demonstrates the techniques and processes involved in handling, analyzing, and managing large-scale climate data using xarray and netCDF4. It includes detailed explanations of how to manage data files based on specific attributes such as date ranges, and efficiently process and move large datasets using distributed computing principles. Each section is thoroughly documented to ensure clarity and ease of understanding, facilitating the replication and adaptation of these methods for similar data-intensive tasks.
+# MAGIC ### **Notebook Overview**
+# MAGIC This notebook is responsible for moving ERA5 climate data from the raw source to the staging area in Databricks. It includes conditional logic to process a small subset of data in the development environment and ensures the proper creation and validation of Delta tables. The notebook primarily focuses on handling data ingestion, table schema checks, and file processing for effective data management in the pipeline.
+# MAGIC
+# MAGIC ---
+# MAGIC
+# MAGIC #### **Outline**
+# MAGIC
+# MAGIC 1. **Introduction and Setup**
+# MAGIC    - Install the required packages (e.g., `numpy`, `xarray`, `netCDF4`, `h5netcdf`).
+# MAGIC    
+# MAGIC 2. **Workspace URL Configuration**
+# MAGIC    - Set up the workspace URL to determine whether the notebook is running in the development environment or another workspace.
+# MAGIC
+# MAGIC 3. **Conditional Logic for Delta Table Validation**
+# MAGIC    - Checks if the Delta table exists and compares its schema.
+# MAGIC    - Creates a new Delta table if it doesn't exist, and ensures that schema consistency is maintained.
+# MAGIC
+# MAGIC 4. **Data Processing and File Movement**
+# MAGIC    - If the notebook is running in the development workspace, it processes a small subset of files for a defined date range.
+# MAGIC    - Files are moved from the source folder to the staging folder, and the inventory of processed files is maintained in the Delta table.
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ### Installation of Required Libraries
 # MAGIC
-# MAGIC This section includes the installation commands for Python libraries that are essential for handling and processing various data formats and performing parallel computations. Each library serves a specific purpose:
+# MAGIC This Jupyter notebook cell installs the required Python packages for processing climate data in NetCDF format. Below is an explanation of each package and the reasoning behind the specific versions:
 # MAGIC
-# MAGIC - `xarray`: Used for labeling, indexing, and synchronizing multidimensional arrays, especially useful for working with climate data formats like netCDF.
-# MAGIC - `netCDF4` and `h5netcdf`: These libraries provide interfaces to netCDF and HDF5 files, respectively, allowing for efficient storage and access to large datasets.
-# MAGIC - `rioxarray`: Extends `xarray` to include tools for spatial analysis, such as rasterio integration for geospatial operations.
+# MAGIC 1. **`numpy==1.26.4`**:
+# MAGIC    - The user specifies that version **1.26.4** of NumPy should be used to ensure compatibility with other libraries or to avoid issues with the latest versions.
+# MAGIC    - NumPy is a fundamental package for numerical computations in Python.
+# MAGIC
+# MAGIC 2. **`xarray`**:
+# MAGIC    - Xarray is a powerful library used for working with labeled multi-dimensional arrays, commonly applied for handling climate data in NetCDF format.
+# MAGIC
+# MAGIC 3. **`netCDF4`**:
+# MAGIC    - The `netCDF4` package provides an interface for reading and writing NetCDF files, a format commonly used in scientific data for large, multi-dimensional datasets.
+# MAGIC
+# MAGIC 4. **`h5netcdf`**:
+# MAGIC    - H5NetCDF is an alternative library for handling NetCDF4 files, specifically those using HDF5 as the underlying format. It provides similar functionality to `netCDF4`, with potential performance benefits in certain scenarios.
+# MAGIC
+# MAGIC ## Reasoning for Specific Versions:
+# MAGIC - The notebook specifies **NumPy version 1.26.4** to ensure compatibility with other libraries or avoid issues that may arise with newer versions.
+# MAGIC - The note to avoid the latest version of NumPy likely relates to compatibility issues with packages such as `xarray` and `netCDF4`.
+# MAGIC
+# MAGIC
 
 # COMMAND ----------
 
@@ -36,45 +68,28 @@ dbutils.library.restartPython()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Importing Necessary Libraries
+# MAGIC # Importing Utilities
 # MAGIC
-# MAGIC This code chunk imports the necessary libraries and modules required for data processing and analysis in a PySpark and scientific data context. Each import serves a specific function in the workflow:
+# MAGIC The line `from utils import *` imports all functions and variables from a module named `utils`. Here's what this implies:
 # MAGIC
-# MAGIC - `os`: Provides a way of using operating system dependent functionality like reading or writing to the filesystem.
-# MAGIC - `xarray` (imported as `xr`): Facilitates working with labeled multi-dimensional arrays and datasets, especially useful for manipulating large climate data files like netCDF.
-# MAGIC - `datetime`: Used to handle and manipulate date and time data, crucial for time-series analysis.
-# MAGIC - `shutil`: Offers high-level file operations such as copying and archiving.
-# MAGIC - `pandas` (imported as `pd`): Essential for data manipulation and analysis, particularly useful for handling tabular data with heterogeneously-typed columns.
-# MAGIC - `netCDF4` (imported as `nc`): Enables interaction with netCDF files which are commonly used for storing scientific data.
-# MAGIC - `lit`: A function from PySpark's SQL module that is used to add a new column with a constant value or to make explicit data type casting in DataFrame operations.
-# MAGIC - `tqdm.auto`: Automatically selects an appropriate progress bar based on the environment (notebook, terminal, etc.), useful for monitoring the progress of data processing loops.
-
-# COMMAND ----------
-
-
-#import os
-#import xarray as xr
-#from datetime import datetime
-#import shutil 
-#import netCDF4 as nc
+# MAGIC - **Purpose of `utils`**:  
+# MAGIC   The `utils` module is likely a custom Python module that contains utility functions or helper methods that are commonly used throughout the notebook.
+# MAGIC   
+# MAGIC - **Wildcard Import (`*`)**:  
+# MAGIC   The `*` operator imports everything from the `utils` module, including all functions, classes, and variables defined in it. However, this practice is typically avoided in larger projects as it can make it harder to track what exactly is being imported and could lead to name conflicts.
+# MAGIC
+# MAGIC
+# MAGIC
 
 # COMMAND ----------
 
 from utils import * 
-import os
 from pyspark.sql import SparkSession
-from delta.tables import DeltaTable
-from pyspark.sql.types import StructType, StructField, StringType, TimestampType  
 
+# COMMAND ----------
 
-from pyspark.sql.types import DateType
-from pyspark.sql.functions import to_date
-from datetime import datetime
-
-import shutil
-import xarray as xr
-import netCDF4 as nc
-
+# MAGIC %md
+# MAGIC **This retrieves the current Databricks workspace URL to determine the execution environment.**
 
 # COMMAND ----------
 
@@ -83,8 +98,31 @@ workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.wo
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC **The dev workspace URL**
+
+# COMMAND ----------
+
 # Dev workspace URL
 dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC
+# MAGIC ### Delta Table Existence and Schema Validation
+# MAGIC
+# MAGIC - This section of the code checks if the script is running in the development workspace (`dev_workspace_url`).
+# MAGIC   
+# MAGIC - If the script is in the development workspace:
+# MAGIC   - It defines the Delta table name (`era5_inventory_table`) and the schema for the table, which includes columns like `date_updated`, `source_file`, and `date_modified_in_s3`.
+# MAGIC   - The code checks if the Delta table already exists:
+# MAGIC     - If the table exists, it compares its current schema with the predefined schema.
+# MAGIC     - If the schemas match, no further action is needed. If they differ, a manual adjustment is recommended.
+# MAGIC   - If the table does not exist, it creates a new Delta table with the specified schema.
+# MAGIC
+# MAGIC - If the script is not in the dev workspace, the function does not run.
+# MAGIC
 
 # COMMAND ----------
 
@@ -132,6 +170,27 @@ else:
     print("This function is not executed in this workspace.")
 
 
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Conditional Execution and File Processing
+# MAGIC
+# MAGIC - **Workspace-Based Logic**: This code executes only if the current workspace is the development workspace. It processes a small subset of data for testing and validation purposes.
+# MAGIC - **Key Variables**:
+# MAGIC   - **`target_folder`**: The folder where the processed files will be moved.
+# MAGIC   - **`table_name`**: The Delta table where the file inventory is maintained.
+# MAGIC   - **`start_date` / `end_date`**: Defines the range of dates for which files will be processed.
+# MAGIC   - **`source_folder`**: The folder containing the original files to be moved.
+# MAGIC   - **`prefix`**: Prefix used to identify files in the source folder.
+# MAGIC   - **`date_pattern`**: The format used for the date in the file names.
+# MAGIC   - **`source_file_attr`**: Column in the Delta table representing the source file name.
+# MAGIC   
+# MAGIC - **Function Execution**: 
+# MAGIC   - The `copy_and_move_files_by_date_and_keep_inventory` function is executed to copy and move files from the source to the target folder while updating the Delta table inventory with the processed file information.
+# MAGIC   
+# MAGIC - **Workspace Check**: If not in the development workspace, the function does not execute, and a message is printed.
+# MAGIC
 
 # COMMAND ----------
 
