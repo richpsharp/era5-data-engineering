@@ -1,4 +1,41 @@
 # Databricks notebook source
+# MAGIC %md
+# MAGIC ### Notebook Overview: 02_HK_SM_Staging_to_Bronze
+# MAGIC
+# MAGIC This notebook is responsible for processing data from the staging area and moving it to the bronze-tier Delta table. The process involves continuous streaming ingestion of NetCDF files, using Databricks' autoloader, to efficiently load and append data to the bronze table.
+# MAGIC
+# MAGIC #### Key Components:
+# MAGIC - **Workspace URL Conditional Logic**:  
+# MAGIC   The notebook checks if it is running in the development workspace before executing any data processing steps. If it is not in the dev environment, the script exits without executing.
+# MAGIC
+# MAGIC - **Data Ingestion**:  
+# MAGIC   The notebook processes a subset of NetCDF files stored in the staging area. It uses the `netcdf_to_bronze_autoloader()` function to load the files and write them to a Delta table in the bronze tier.
+# MAGIC
+# MAGIC - **Streaming Query**:  
+# MAGIC   The ingestion process uses a streaming query to continuously load new data and append it to the Delta table. Checkpointing is used to track progress and ensure fault tolerance.
+# MAGIC
+# MAGIC - **Schema Definition**:  
+# MAGIC   The schema for the bronze table is defined to ensure that the loaded data is structured correctly, with fields for date updated, source file, and additional metadata.
+# MAGIC
+# MAGIC This notebook ensures efficient movement of data from staging to bronze, with logic in place to avoid redundant execution outside the development workspace.
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Installing Required Libraries
+# MAGIC
+# MAGIC This section installs the necessary Python libraries for handling NetCDF files and multidimensional arrays. The specific version of `numpy` (1.26.4) is required to avoid compatibility issues, and the latest version should not be used as it may cause the notebook to crash.
+# MAGIC
+# MAGIC - **`numpy`**: Used for handling large, multidimensional arrays and matrices.
+# MAGIC - **`xarray`**: Provides a high-level interface for working with labeled multi-dimensional arrays, especially useful for NetCDF files.
+# MAGIC - **`netCDF4` and `h5netcdf`**: Libraries for working with NetCDF files, a common format for storing climate data.
+# MAGIC
+# MAGIC Make sure these specific versions are installed to ensure the notebook runs without errors.
+# MAGIC
+
+# COMMAND ----------
+
 # MAGIC %pip install numpy==1.26.4 #### please use this version of numpy ## DO NOT USE THE LATEST VERSION
 # MAGIC %pip install xarray
 # MAGIC %pip install netCDF4 h5netcdf
@@ -13,22 +50,6 @@
 # COMMAND ----------
 
 dbutils.library.restartPython()
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Importing Libraries and Modules for Data Processing
-# MAGIC
-# MAGIC This section includes the import statements necessary for data manipulation, file management, and structured data handling within the notebook. Each library or module plays a critical role in the data processing workflow:
-# MAGIC
-# MAGIC - `pandas` (imported as `pd`): Essential for data manipulation and analysis, particularly useful for handling tabular data with heterogeneously-typed columns.
-# MAGIC - `xarray` (imported as `xr`): Facilitates working with labeled multi-dimensional arrays and datasets, which is especially useful for manipulating large climate data files like netCDF.
-# MAGIC - `os`: Provides a way of using operating system dependent functionality like reading or writing to the filesystem, crucial for managing data files and directories.
-# MAGIC - `pyspark.sql.types`: This module includes classes that define the structure of DataFrames in PySpark, such as `StructType` and `StructField`, along with specific data types (`FloatType`, `StringType`, `TimestampType`, `LongType`, `BinaryType`). These are used to specify schema definitions for Spark DataFrames, ensuring data consistency and structure.
-# MAGIC - `datetime`: Used to handle and manipulate date and time data, which is crucial for time-series analysis and operations based on time conditions.
-# MAGIC
-# MAGIC By importing these modules and libraries, the notebook is equipped to handle a variety of data operations, from basic file interactions to complex data transformations within distributed environments.
-# MAGIC
 
 # COMMAND ----------
 
@@ -62,6 +83,28 @@ output_schema = StructType([
 
 # Get the current workspace URL
 workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.workspaceUrl", None)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Conditional Data Processing Based on Workspace
+# MAGIC
+# MAGIC This section contains logic that checks the workspace URL to determine if the script is running in the development environment (`dev_workspace_url`). If it is, the script processes a small subset of data and moves it from the staging area to the bronze Delta table using Databricks' autoloader. If not, the script exits without executing.
+# MAGIC
+# MAGIC - **Conditional Execution**:  
+# MAGIC   The script runs only if it detects the workspace URL matches the development environment.
+# MAGIC
+# MAGIC - **Data Processing in Dev Workspace**:  
+# MAGIC   - **Source File Location**: The location of the source NetCDF files to be processed.
+# MAGIC   - **Checkpoint Location**: The directory where checkpoint data for the streaming process is stored.
+# MAGIC   - **Streaming Query**: A name assigned to the streaming query used for loading files.
+# MAGIC   - **Data Format**: The format of the data being processed (`delta`).
+# MAGIC   - **Delta Table Name**: The table where the processed data is written.
+# MAGIC   - **Write Mode**: Data is appended to the existing table.
+# MAGIC   - **Data Provider**: The provider of the data, in this case, `Atmospheric and Environmental Research (AER)`.
+# MAGIC
+# MAGIC If the script is not running in the dev workspace, it exits and prints a message indicating no further action will be taken.
+# MAGIC
 
 # COMMAND ----------
 

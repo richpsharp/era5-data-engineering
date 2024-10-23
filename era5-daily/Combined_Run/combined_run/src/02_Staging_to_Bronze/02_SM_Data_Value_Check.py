@@ -1,4 +1,35 @@
 # Databricks notebook source
+# MAGIC %md
+# MAGIC ### 02_SM_Data_Value_Check
+# MAGIC
+# MAGIC This notebook is responsible for performing data value checks on key climate variables in the bronze-tier Delta table, ensuring that the data is within expected ranges and identifying any outliers.
+# MAGIC
+# MAGIC #### Key Components:
+# MAGIC
+# MAGIC - **Workspace URL Conditional Logic**:  
+# MAGIC   The notebook first checks whether it is running in the development workspace. If not, it exits without executing any further code.
+# MAGIC
+# MAGIC - **Catalog and Table Setup**:  
+# MAGIC   If the notebook is running in the dev workspace, the catalog, schema, and table names are defined for the ERA5 climate data. The full table name (`aer_era5_bronze_1950_to_present_test`) is constructed for querying.
+# MAGIC
+# MAGIC - **Data Quality Checks**:
+# MAGIC   The notebook performs value checks on four key variables, with specific thresholds for each:
+# MAGIC   - **`mean_t2m_c`**: Checks that values are between `-123.15` and `100`.
+# MAGIC   - **`max_t2m_c`**: Checks that values are between `-123.15` and `100`.
+# MAGIC   - **`min_t2m_c`**: Checks that values are between `-123.15` and `100`.
+# MAGIC   - **`sum_tp_mm`**: Checks that values are between `-1` and `100,000`.
+# MAGIC
+# MAGIC - **Query Execution and Output**:  
+# MAGIC   For each variable, the notebook constructs and runs a SQL query to identify outliers. Any rows that fall outside the specified range are written to new Delta tables (e.g., `mean_t2m_c_check`, `max_t2m_c_check`, etc.), allowing for detailed review of data anomalies.
+# MAGIC
+# MAGIC - **Conditional Execution**:  
+# MAGIC   The notebook only runs the data value checks in the dev workspace. If the script is executed in a different environment, it will exit without running the queries or saving any results.
+# MAGIC
+# MAGIC This notebook ensures that key climate data variables in the bronze-tier table are within expected bounds, providing data quality validation before further processing.
+# MAGIC
+
+# COMMAND ----------
+
 from pyspark.sql import SparkSession
 
 # Get the current workspace URL

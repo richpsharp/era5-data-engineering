@@ -1,4 +1,33 @@
 # Databricks notebook source
+# MAGIC %md
+# MAGIC ### 02_SM_Date_Range_Check
+# MAGIC
+# MAGIC This notebook is responsible for checking the completeness of the date range in the ERA5 bronze-tier dataset. It identifies whether there are any missing dates within the dataset and outputs the results.
+# MAGIC
+# MAGIC #### Key Components:
+# MAGIC
+# MAGIC - **Workspace URL Conditional Logic**:  
+# MAGIC   The notebook first checks if it is running in the development workspace. If not, it exits without executing any further code.
+# MAGIC
+# MAGIC - **Catalog and Table Setup**:  
+# MAGIC   If the notebook is running in the dev workspace, the catalog, schema, and table names are defined for the ERA5 climate data. The full table name (`aer_era5_bronze_1950_to_present_test`) is constructed for querying.
+# MAGIC
+# MAGIC - **Date Range Calculation**:
+# MAGIC   - The notebook retrieves the earliest (`start_date`) and latest (`end_date`) dates from the ERA5 dataset.
+# MAGIC   - It then generates a sequence of all dates between the `start_date` and `end_date` using an interval of 1 day.
+# MAGIC
+# MAGIC - **Missing Date Detection**:
+# MAGIC   - The notebook performs a **left anti-join** between the generated sequence of full dates and the actual dates in the dataset to identify any missing dates.
+# MAGIC   - If missing dates are found, they are displayed in the output. If no dates are missing, a message is printed confirming that all dates are present.
+# MAGIC
+# MAGIC - **Conditional Execution**:
+# MAGIC   The notebook only runs in the development workspace. If the script is executed in a different environment, it exits without performing the date range check.
+# MAGIC
+# MAGIC This notebook ensures that the ERA5 dataset has complete coverage of dates, allowing the user to detect and address any gaps in the data before further processing.
+# MAGIC
+
+# COMMAND ----------
+
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, sequence, explode, expr
 
