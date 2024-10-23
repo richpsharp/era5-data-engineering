@@ -1,8 +1,24 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Efficient Geospatial Data Processing and Storage with GeoPandas and PySpark
 # MAGIC
-# MAGIC This notebook demonstrates a robust method for handling and processing geospatial data derived from shapefiles using GeoPandas, followed by efficient storage in Delta tables via PySpark. The procedures detailed here include validating and transforming geographic data, enriching it with metadata, and utilizing batch processing techniques to manage large datasets effectively. Each section is thoroughly documented, ensuring clarity in understanding and implementing the steps required for scalable and efficient geospatial data management.
+# MAGIC ## Notebook Overview: 02_SM_Source_to_Bronze_Country_Boundaries
+# MAGIC
+# MAGIC ### Objective:
+# MAGIC This notebook is designed to process and transform country boundary shapefiles into bronze-tier Delta tables within the Databricks environment. It ensures that the geometries are properly transformed and stored, while handling execution logic based on the current workspace environment.
+# MAGIC
+# MAGIC ### Key Tasks:
+# MAGIC 1. **Library Installations**: Installs necessary geospatial libraries such as `geopandas` and `tqdm` for shapefile processing.
+# MAGIC 2. **Workspace Check**: Verifies the current Databricks workspace URL to ensure that the script only executes in the designated development environment.
+# MAGIC 3. **Shapefile Processing**: 
+# MAGIC    - Utilizes the `process_shapefile_to_delta()` function to load a country boundary shapefile, process its geometries, and write the results to a Delta table.
+# MAGIC    - Includes a CRS transformation to EPSG 4326 for consistency in spatial operations.
+# MAGIC 4. **Exit Condition**: If the script is not running in the development workspace, it safely exits without executing the processing function.
+# MAGIC
+# MAGIC ### Key Concepts:
+# MAGIC - **Shapefile Processing**: Conversion of vector data (country boundaries) into a Delta table format for downstream analysis.
+# MAGIC - **CRS Transformation**: Ensures that all geometries are standardized using EPSG 4326 for spatial compatibility.
+# MAGIC - **Workspace-Conditional Execution**: Prevents execution in non-development environments to ensure proper testing and data integrity.
+# MAGIC
 
 # COMMAND ----------
 
@@ -34,23 +50,6 @@ dbutils.library.restartPython()
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ### Importing Necessary Libraries and Modules for Geospatial Data Analysis and Processing
-# MAGIC
-# MAGIC This code chunk imports the essential libraries and modules required for handling geospatial data, timing operations, and integrating with Spark for distributed data processing:
-# MAGIC
-# MAGIC - `os`: Provides a set of functions to interact with the operating system, such as navigating the file system or managing file paths, essential for data file management.
-# MAGIC - `time`: Used for accessing time-related functions like delays (sleep), which can be useful for timing or pausing script execution, particularly in batch processes or during debugging.
-# MAGIC - `pandas` (imported as `pd`): A foundational library for data manipulation and analysis, offering data structures and operations for manipulating numerical tables and time series.
-# MAGIC - `geopandas` (imported as `gpd`): Extends `pandas` making it possible to handle geospatial data more conveniently by adding support for geographic operations on geometries directly within dataframes.
-# MAGIC - `tqdm.auto`: Automatically selects and displays a smart progress bar based on the environment (notebook, terminal), ideal for tracking lengthy data processing tasks.
-# MAGIC - `SparkSession`: Initializes a Spark session, the entry point to programming Spark with the Dataset and DataFrame API, facilitating distributed data processing.
-# MAGIC - `pyspark.sql.functions`: Import specific functions like `lit`, which generates columns with literal (constant) values, and `current_timestamp`, which returns the current timestamp as a column, useful for adding standardized timestamps to data records.
-# MAGIC
-# MAGIC These imports equip the notebook to perform advanced data operations, including geospatial data analysis, efficient data handling, and integration with PySpark for scalable and distributed data processing.
-
-# COMMAND ----------
-
 from utils import *
 
 
@@ -61,6 +60,29 @@ workspace_url = spark.conf.get("spark.databricks.workspaceUrl", None)
 
 # Print the workspace URL to verify
 print(workspace_url)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Processing Shapefile to Delta Table Based on Workspace URL
+# MAGIC
+# MAGIC This section of the notebook checks the current workspace URL to determine if the script should execute the shapefile processing function.
+# MAGIC
+# MAGIC - **Workspace Check**:  
+# MAGIC   The script first checks if it is running in the development workspace (`'dbc-ad3d47af-affb.cloud.databricks.com'`). If the workspace matches, the script proceeds with processing the country boundaries shapefile into a Delta table.
+# MAGIC   
+# MAGIC - **Shapefile Processing**:
+# MAGIC   - **`process_shapefile_to_delta()`**: This function reads the country boundary shapefile and loads it into a Delta table for further analysis.
+# MAGIC   - **Parameters**:
+# MAGIC     - **`spark`**: The current Spark session.
+# MAGIC     - **`shapefile_path`**: The path to the shapefile, containing country boundary information.
+# MAGIC     - **`delta_table_name`**: The name of the Delta table where the processed data will be stored.
+# MAGIC     - **`batch_size`**: Number of records processed in each batch.
+# MAGIC     - **`target_crs`**: EPSG code (`4326` in this case) used to transform the shapefile’s coordinates into the desired spatial reference system.
+# MAGIC     
+# MAGIC - **Exit Condition**:  
+# MAGIC   If the script is not running in the designated workspace, it prints a message and exits without executing the function to avoid unnecessary processing in other environments.
+# MAGIC
 
 # COMMAND ----------
 
