@@ -84,6 +84,35 @@ spark.conf.set("spark.sql.shuffle.partitions", 32)                 # <-- default
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ### Function: `bronze_to_silver_era5_country_approximate_autoloader`
+# MAGIC
+# MAGIC This function is responsible for streaming new records from the ERA5 bronze table and performing an approximate spatial join with country boundary data in the silver table. The function relies on H3 grid indexing to map ERA5 data points to specific countries.
+# MAGIC
+# MAGIC - **Parameters:**
+# MAGIC   - `bronze_era5_table`: The name of the table containing ERA5 data in the bronze layer.
+# MAGIC   - `country_index_table`: The table containing country boundary data with corresponding H3 grid indexes.
+# MAGIC   - `lat_col`: The column name representing latitude in the ERA5 table.
+# MAGIC   - `lon_col`: The column name representing longitude in the ERA5 table.
+# MAGIC   - `target_resolution`: The H3 resolution used for spatial indexing.
+# MAGIC   - `join_type`: Type of join to be used when combining ERA5 data with country boundary data (e.g., left join).
+# MAGIC
+# MAGIC - **Key Steps:**
+# MAGIC   - **Streaming New Records:**
+# MAGIC     - Reads the ERA5 data from the bronze table using Spark's `readStream` function.
+# MAGIC     - Creates an H3 index (`grid_index`) for each data point based on latitude and longitude, which is essential for spatially joining the data.
+# MAGIC   - **Country Index Table:**
+# MAGIC     - Loads the country boundary data from the silver table, retaining only the required columns (`grid_index` and `country`), and ensures there are no duplicate records.
+# MAGIC   - **Join Condition:**
+# MAGIC     - Defines the join condition based on the `grid_index` field, which ensures that each ERA5 data point is matched to the correct country using H3 spatial indexing.
+# MAGIC   - **Final Dataset:**
+# MAGIC     - Joins the ERA5 data with the country boundary data and returns a DataFrame (`era5_changeset`) that contains the ERA5 data along with the corresponding country information.
+# MAGIC
+# MAGIC This function efficiently streams and processes data by leveraging H3 spatial indexing for approximate country mapping.
+# MAGIC
+
+# COMMAND ----------
+
 ####################
 ### DEFINING A FUNCTION HERE TO AVOID SPARK NOT DEFINED ERROR
 ################
@@ -128,6 +157,37 @@ def bronze_to_silver_era5_country_approximate_autoloader(bronze_era5_table,count
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ### Function: `merge_era5_with_silver`
+# MAGIC
+# MAGIC This function handles merging updates from the ERA5 data changeset (from the bronze table) into the silver-tier Delta table. The function ensures only the most recent records are retained and older or duplicate records are removed to maintain data consistency.
+# MAGIC
+# MAGIC - **Parameters:**
+# MAGIC   - `changeset_df`: The DataFrame containing the new changeset data from the ERA5 bronze table.
+# MAGIC   - `batch_id`: The ID of the current batch being processed, used in streaming.
+# MAGIC
+# MAGIC - **Key Steps:**
+# MAGIC   - **Initialize Delta Table:**
+# MAGIC     - The function starts by loading the Delta table (silver layer) where the ERA5 data will be merged.
+# MAGIC   
+# MAGIC   - **Deduplication and Sequence Ordering:**
+# MAGIC     - For each key, the function uses a windowed operation (`row_number()`) to order records by the sequence column (`sequence_col`), ensuring that only the latest records are retained. 
+# MAGIC     - Deduplication is based on the merge keys (`silver_merge_keys`) and the "country" column.
+# MAGIC     - Rows are filtered so that only the most recent record for each key is included in the final dataset.
+# MAGIC
+# MAGIC   - **Delete Old Records:**
+# MAGIC     - The function ensures that out-of-order records (older than the latest sequence value) are deleted from the silver table to prevent outdated information from being retained.
+# MAGIC     - The deletion happens only when the sequence value of the incoming record is greater than or equal to the existing record in the silver table.
+# MAGIC
+# MAGIC   - **Insert Latest Changes:**
+# MAGIC     - After deduplication and ordering, the latest records from the changeset are merged into the silver table.
+# MAGIC     - The function uses the `merge` operation with `whenNotMatchedInsertAll()` to insert new records into the silver table.
+# MAGIC
+# MAGIC This function ensures data consistency by only inserting the latest records while deleting outdated data to avoid duplication and inconsistencies in the silver table.
+# MAGIC
+
+# COMMAND ----------
+
 ####################
 ### DEFINING A FUNCTION HERE TO AVOID SPARK NOT DEFINED ERROR
 ################
@@ -169,6 +229,42 @@ def merge_era5_with_silver(changeset_df, batch_id):
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ### Setting Up Workspace Parameters and Conditional Logic
+# MAGIC
+# MAGIC In this section, the script determines whether it's running in the development environment by checking the workspace URL. Based on the workspace, the script sets key parameters and executes the pipeline that moves data from the bronze to silver tier. Here’s a brief breakdown:
+# MAGIC
+# MAGIC 1. **Workspace URL Check**:
+# MAGIC    - The script retrieves the current workspace URL and compares it with the development workspace URL (`dev_workspace_url`).
+# MAGIC    - If the script is running in the development workspace, the subsequent logic is executed; otherwise, the function exits without running.
+# MAGIC
+# MAGIC 2. **Setting Parameter Values**:
+# MAGIC    - **`bronze_era5_table`**: Points to the table where ERA5 climate data is stored in the bronze tier.
+# MAGIC    - **`target_silver_table`**: Defines the target Delta table in the silver tier where the processed data will be saved.
+# MAGIC    - **`country_index_table`**: Defines the table that contains the H3 grid index and country boundaries.
+# MAGIC    - **`lat_col` and `lon_col`**: Specify the latitude and longitude columns in the ERA5 dataset.
+# MAGIC    - **`target_resolution`**: Sets the resolution for the H3 spatial grid.
+# MAGIC    - **`sequence_col`**: A column that represents the creation date for managing data updates.
+# MAGIC
+# MAGIC 3. **Defining Merge Keys and Condition**:
+# MAGIC    - The `silver_merge_keys` (time, latitude, longitude) are defined to ensure that records can be uniquely identified and merged during the data pipeline process.
+# MAGIC    - The `silver_merge_condition` is constructed dynamically by joining the keys, which will be used to merge the records during updates.
+# MAGIC
+# MAGIC 4. **Running the Function**:
+# MAGIC    - The function `bronze_to_silver_era5_country_approximate_autoloader()` is executed to perform the spatial join between ERA5 data and the country boundary data.
+# MAGIC
+# MAGIC 5. **Schema Creation**:
+# MAGIC    - If the target silver table does not exist, the script creates it with the necessary schema (columns like time, latitude, longitude, and other metadata).
+# MAGIC    - The table is clustered by the merge keys to optimize performance.
+# MAGIC
+# MAGIC 6. **Writing the Stream**:
+# MAGIC    - The processed data is streamed into the silver table using Delta's schema evolution and merge features.
+# MAGIC    - A checkpoint location is used to track the progress of the streaming data, ensuring fault tolerance in case of failure.
+# MAGIC    
+# MAGIC 7. **Execution Logic**:
+# MAGIC    - If the script is not running in the development workspace, it prints a message and exits without executing the pipeline.
+# MAGIC    - If running in the development workspace, the function is executed on a small subset of data for testing purposes.
+# MAGIC
+# MAGIC This section ensures that the ERA5 data is appropriately processed and moved to the silver tier, using conditional execution and workspace-specific logic to handle the data efficiently.
 # MAGIC
 
 # COMMAND ----------
