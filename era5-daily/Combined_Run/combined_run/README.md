@@ -1,4 +1,19 @@
-# DABs Repository
+# ERA5 End-to-End Run DAB Repository
+
+[HB] 
+To Dos
+2. Eliminate redundant folder.
+3. Remove author's initial's from title of notebook.
+4. Explain other files/folders in "combined_run" folder (ex. "created by DAB/Github").
+6. Add else if statements for staging (and eventually prod).
+7. Remove "dev" from cluster names in resources YAML.
+8. Create dev, staging, and prod copies of country tesselation.
+Backlog
+10. Add data quality check for duplicate files, timestamps within the file, and post-tess. (Backlog - create Jira ticket.)
+11. Review flagging data for duplicant and missing data and files. (Backlog - create Jira ticket.)
+12. Add screenshot of data lineage once data is in production. (Backlog - create Jira ticket.)
+13. In Union Chips workbook, add a comment explaining the context. (Ex. "H3 cells were split as part of the tessalation process and need to be unioned to eliminate this processing artifact.") (Backlog - create Jira ticket.) 
+14. Review each notebook. (Backlog - create Jira ticket.)
 
 This repository contains the workflow and configurations for processing ERA5 climate data using Databricks Asset Bundles (DABs). The workflows are designed to run a sequence of tasks, including unit tests, data quality checks, and processing pipelines that transform data from raw formats (source) to usable datasets (bronze and silver tiers).
 
@@ -12,7 +27,10 @@ Each job in the pipeline is responsible for a specific phase of data processing.
 
 The repository uses a combination of Databricks clusters and Photon acceleration to optimize performance for large-scale data processing. Each task has dependencies on previous tasks to ensure that processes run in a logical sequence.
 
-### Pipeline order of operations
+### Pipeline Order of Operations
+
+[HB]  The last two "Run on Sample" sub tasks, I would like to discuss to be sure I understand. Why are these needed if we have conditional file processing embedded already?
+
 The pipeline consists of several jobs that run in sequence to process ERA5 climate data. Below is the order of operations:
 
 - **`era5_dev_source_to_staging_job`**  
@@ -68,7 +86,7 @@ Each job is dependent on the successful completion of the previous job, ensuring
          - **Conditional File Processing**:  
            - If running in the development workspace, it processes a small subset of data for a given date range (e.g., January 1950) and moves files from the source to the staging area using the function `copy_and_move_files_by_date_and_keep_inventory`. 
            - The function is not executed if the script is running in a non-development workspace.
-         
+       
        - **`01_SM_Data_Quality_Spatial_Dimension_Check.py`**  
          This script checks the spatial dimensions of NetCDF files in the staging folder to ensure data quality. It performs the following actions:
          - **Spatial Dimension Validation**:  
@@ -89,7 +107,6 @@ Each job is dependent on the successful completion of the previous job, ensuring
            - **`target_crs`**: The EPSG code for the target CRS to which the shapefile will be transformed (e.g., 4326 for WGS 84).
          - **Conditional Execution**:  
            - The script checks the workspace URL to determine whether to run the transformation. If the script is not running in the designated development workspace, it will print a message and exit without executing the function.
-
      
      - **`02_Staging_to_Bronze/`**  
        This folder contains scripts responsible for moving data from the staging area to the bronze tier, including data quality checks and ensuring data consistency, particularly around date ranges and value boundaries.
@@ -237,7 +254,7 @@ Each job is dependent on the successful completion of the previous job, ensuring
          - **Conditional Execution**:
            - The script is only executed in the development workspace. If running in non-development environments, it skips execution.
 
-   2. **`tests/`**  
+2. **`tests/`**  
    This folder contains unit tests that ensure the quality and correctness of the various transformation steps. The tests run before the actual tasks to catch any issues.
    - **Subfolders:**  
      - `01_Source_to_Staging`: Unit tests for the source-to-staging process.
@@ -251,9 +268,154 @@ Each job is dependent on the successful completion of the previous job, ensuring
    Contains configuration files such as YAML files that define the sequence of jobs and tasks. These configurations set up the clusters, task dependencies, and notebook execution for each stage of the data pipeline.
    - **Important YAML Files:**  
      - `combined_run_job.yaml`: Defines the main workflow that coordinates all jobs, from source-to-staging through to bronze and silver tiers.
+
+  ## THESE FILES ARE GENERATED AS A PART OF THE DABs TEMPLATE 
+
+  **NOTE : DO NOT CHANGE THE CONTENTS OF THESE FOLDERS**
    
-### Clusters and Task Configuration
+4. **`.vscode`**
 
-Each job uses specific Databricks clusters defined in the `job_clusters` section of the YAML files. The clusters are configured with appropriate settings such as Spark version, node types, and autoscaling options to ensure efficient resource utilization.
+     The `.vscode` folder contains configuration files specific to Visual Studio Code, providing recommended extensions and environment settings that improve the development experience within this project.
 
-The `tasks` section in each YAML file defines individual notebooks to be executed as part of the pipeline. Each task may depend on the successful execution of a previous task, ensuring that the pipeline runs in a defined order.
+    - **`__builtins__.pyi`**  
+        A stub file to provide type hints for Databricks SDK functions, ensuring accurate code completions and type-checking support in Visual Studio Code, specifically with the Pylance extension.
+
+    - **`extensions.json`**  
+       Recommends essential VS Code extensions for this project:
+       - **Databricks Extension for VS Code**: Integrates Databricks functionality.
+       - **Pylance**: Provides high-performance IntelliSense and type-checking for Python.
+       - **YAML Support by RedHat**: Enhances YAML editing, useful for managing configuration files.
+
+    - **`settings.json`**  
+      Defines workspace-specific settings, including:
+      - **Python Analysis and Testing**: Configures Pylance for better Python analysis and enables `pytest` for unit testing.
+      - **Environment Variable Loading**: Specifies `.env` files for defining environment variables.
+      - **Jupyter Notebook Cell Delimiters**: Customizes cell delimiters to match the Databricks notebook format.
+      - **Excluded Files**: Omits temporary files such as `__pycache__`, `.pytest_cache`, and `.egg-info` directories from version control and file explorer views.
+
+5. **`fixtures`**
+
+   The `fixtures` folder serves as a repository for test fixtures, such as sample data files (e.g., CSVs), used for testing and validation purposes within the project.
+
+   - **`.gitkeep`**  
+     This placeholder file keeps the `fixtures` directory tracked by Git, even if it’s empty. It also includes instructions for loading a CSV fixture as a DataFrame. The provided Python code demonstrates how to dynamically locate the `fixtures` folder, making it accessible in both Databricks and local environments. 
+
+6. **`geospatial/mosaic/gdal/jammy`**
+
+   This folder contains a shell script (`mosaic-gdal-init.sh`) that sets up the GDAL (Geospatial Data Abstraction Library) environment on an Ubuntu 22.04 (Jammy) system, specifically for Databricks Runtime (DBR) 13+ environments. This script provides essential configurations for geospatial data processing, integrating GDAL and Mosaic libraries in Databricks.
+
+    - **`mosaic-gdal-init.sh`**  
+     This script is a setup utility for configuring GDAL and Mosaic on Ubuntu-based Databricks clusters. The script is configurable via several conditional variables, allowing the user to control installations based on specific needs:
+
+        - **GDAL Installation**:
+          - Installs GDAL version 3.4.1 by default or 3.4.3 with the optional UbuntuGIS PPA.
+          - Configures repository sources and installs native dependencies for geospatial processing (e.g., `unixodbc`, `libcurl3-gnutls`, and GDAL bindings).
+          - Copies pre-built JNI shared objects from either a local path or GitHub, based on configuration.
+
+        - **Mosaic Installation**:
+          - Installs the Mosaic library, a tool for geospatial data processing in Databricks, controlled by the `WITH_MOSAIC` flag.
+          - Uses the `MOSAIC_PIP_VERSION` variable to set the specific version of Mosaic for installation.
+
+7. **`scratch`**
+
+   This folder is intended for personal and exploratory notebooks, allowing users to experiment without affecting the core codebase. By default, the `scratch` folder is ignored in Git (as specified in `.gitignore`), meaning files and notebooks saved here won’t be committed to the repository. This setup helps maintain a clean project structure by separating exploratory work from production code.
+
+    - **`README.md`**  
+         Provides a brief description of the folder's purpose and clarifies its exclusion from Git tracking.
+
+8. **`databricks.yml`**
+
+   This configuration file defines a Databricks Asset Bundle (`combined_run`) for managing environments across development, staging, and production. It specifies deployment targets with settings to ensure resources are correctly prefixed and scheduled, depending on the environment (development or production).
+
+  - **`bundle`**  
+    - **`name`**: The name of the Databricks asset bundle, `combined_run`.
+
+  - **`include`**  
+    - Specifies resource files (`*.yml`) to include in the bundle, typically located in the `resources` folder.
+
+  - **`targets`**  
+     Defines specific environments (development and production) with distinct configurations:
+  
+  - **`dev` (default)**  
+    - Mode: `development`, used for personal testing and experimentation. Resources are prefixed with `[dev my_user_name]` to avoid collisions, and schedules are paused by default.
+    - Workspace: Points to the development workspace host URL.
+
+  - **`prod`**  
+    - Mode: `production`, used for official deployment. Enforces strict settings and verification to ensure stability and compliance.
+    - Workspace:
+      - Host: Specifies the production Databricks workspace.
+      - Root Path: Sets the root path for resources in production, using a dynamic path that incorporates the bundle name and target.
+    - `run_as`: Specifies the user (`smajumder1@ua.edu`) to execute production deployments, ensuring consistent permissions and accountability.
+
+     This setup facilitates efficient CI/CD for Databricks assets, allowing easy switching between development and production environments.
+
+9. **`pytest.ini`**
+
+   The `pytest.ini` file configures `pytest`, a testing framework for Python, to specify test discovery paths and Python source paths.
+
+   - **`[pytest]`**  
+      Declares that the following configurations apply to `pytest`.
+
+    - **`testpaths`**  
+     Specifies the directory `tests` as the root path for discovering test files. This allows `pytest` to automatically locate and execute tests within the `tests` folder.
+
+    - **`pythonpath`**  
+     Adds the `src` directory to the Python path, enabling `pytest` to find and import modules within `src` during testing. This ensures that tests can access the source code without modifying the system's Python path.
+
+     This setup enables structured testing within the repository, making it easy for `pytest` to locate and execute tests while ensuring access to necessary source files.
+
+10. **`requirements-dev.txt`**
+
+     The `requirements-dev.txt` file lists dependencies required for local development and testing of this project. 
+
+    - **Core Dependencies**
+       - `databricks-dlt`  
+          Provides code completion and support for working with Databricks Delta Live Tables (DLT).
+  
+       - `pytest`  
+          A testing framework for Python, used as the default testing tool for this project.
+  
+        - `setuptools` and `wheel`  
+          Dependencies for building Python packages (wheel files), facilitating distribution and installation.
+
+   - **Optional Dependencies**
+       - `databricks-connect`  
+       Allows parts of the project to be run locally, simulating the Databricks environment.  
+        - This is especially useful when using the Databricks extension for Visual Studio Code, which can auto-install `databricks-connect`. 
+        - For manual installation, the configuration here suggests using a compatible version with Databricks Runtime `13.3`. Uncomment the line with `databricks-connect` to install it if not using Visual Studio Code.
+
+        This file is intended for development dependencies, separate from the dependencies required for Databricks Workflows. 
+
+11. **`setup.py`**
+
+     The `setup.py` file is the configuration script for building and packaging the `combined_run` project. This script is used by `setuptools` to package the project as a wheel file for deployment and distribution.
+
+     **Key Sections of `setup.py`:**
+
+       - **Basic Configuration:**
+          - **Project Name**: The project is named `"combined_run"`.
+          - **Versioning**: The version includes the `combined_run` package version concatenated with a UTC timestamp, ensuring each build is unique and picked up by all-purpose clusters.
+          - **Author and URL**: Contains author contact (`smajumder1@ua.edu`) and a URL (`https://databricks.com`).
+
+     - **Source and Packaging:**
+         - **Source Directory**: The code for this project resides in the `src` folder.
+         - **Packages**: `find_packages(where='./src')` automatically identifies packages in the `src` directory for inclusion.
+
+     - **Entry Points:**
+        - Defines `"main=combined_run.main:main"` as the entry point for the project, allowing `combined_run` to be launched via `main` as the primary script.
+
+    - **Dependencies:**
+  - **`install_requires`**: Lists dependencies to be installed if the wheel is used as a library dependency. The `setuptools` package is included for building and installing the package.
+  
+- **Usage Notes**:
+  - **Wheel File**: The setup configuration allows this project to be packaged as a wheel file for convenient deployment. 
+  - **Dependencies**: If the wheel is used in a Databricks environment, additional dependencies should be defined in the environment-specific configuration.
+
+  This script should generally not be executed directly; instead, follow the instructions in the `README.md` for deploying, testing, and running the project.
+
+
+
+
+
+
+ 

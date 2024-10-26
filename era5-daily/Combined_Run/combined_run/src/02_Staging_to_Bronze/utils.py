@@ -6,82 +6,108 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, FloatType, StringType, TimestampType, LongType, BinaryType
 from datetime import datetime
 
-def netcdf_to_bronze_autoloader(spark,source_file_location,
-                     output_schema, checkpoint_location, 
-                     streaming_query_name,data_format,table_name, 
-                     schema_name, catalog_name,write_mode,
-                     data_provider,date_created_attr='date_created'): 
-    
-   ## loading the stream 
-    read_stream = (spark.readStream
-	.format("cloudFiles") # "cloudFiles" = use Autoloader
-	.option("cloudFiles.format", "BINARYFILE") # So we don't parse it until inside the foreachBatch
- 	.load(source_file_location) # Volume containing files. Can use *-wildcards
-) 
-    
 
+
+def netcdf_to_bronze_autoloader(spark, source_file_location, output_schema, checkpoint_location,
+                                streaming_query_name, data_format, table_name, schema_name,
+                                catalog_name, write_mode, data_provider, reference_ds_path,
+                                date_created_attr='date_created',
+                                interpolation_method='linear'):
     
-    ## a function to parse netcdf files and convert them into pandas and later spark dataframes
+    ### check if the reference dataset is available
+    if not os.path.exists(reference_ds_path):
+        print(f"Reference dataset {reference_ds_path} not found. Please check the path and try again.")
+        return ## Exit the function if the file is not found
+
+    # Load the reference dataset for interpolation
+    try: 
+        ref_ds = xr.open_dataset(reference_ds_path, engine='netcdf4')
+    except ValueError as e:
+        print(f"Error opening reference file {reference_ds_path} with netCDF4 engine: {e}")
+        ref_ds = xr.open_dataset(reference_ds_path, engine='h5netcdf')
+
+    target_lat = ref_ds.lat.values
+    target_lon = ref_ds.lon.values
+
+    # Loading the stream
+    read_stream = (
+        spark.readStream
+        .format("cloudFiles")
+        .option("cloudFiles.format", "BINARYFILE")
+        .load(source_file_location)
+    )
+
+    # Function to parse netCDF files, interpolate, and convert to Spark-compatible DataFrames
     def parse_netcdf(iterator, source_file_path='Source_File_Path',
-                     ingest_timestamp_column='Ingest_Timestamp',
-                     data_provider= data_provider):  # Add default arguments for metadata
+                     ingest_timestamp_column='Ingest_Timestamp', data_provider=data_provider):
         for pd_df in iterator:
             for _, row in pd_df.iterrows():
-                xds = xr.open_dataset(row['path'])  # Assume row has a 'path' column
+                try:
+                    # Specify the engine explicitly
+                    xds = xr.open_dataset(row['path'],engine='netcdf4')  # Open the NetCDF file
+                except ValueError as e:
+                    print(f"Error opening file {row['path']} with netCDF4 engine: {e}")
+                    xds = xr.open_dataset(row['path'], engine='h5netcdf')
 
-                # Check if file contains ERA5T data
-                if 'expver' in xds.variables:
-                    # "Experiment version": if data older than 60 days, straightforward.
-                    # If newer, this flag distinguishes old and newer data.
-                    pdf = xds.sel(expver=1).drop_vars(['expver']).to_dataframe()
-                else:
-                    pdf = xds.to_dataframe() 
+                # Initialize empty dictionary to store interpolated variables
+                interpolated_data = {}
 
-                pdf.dropna(inplace=True)  # Drop rows with null values
+                # Loop through each variable in the NetCDF file, interpolating to target grid
+                for variable in xds.data_vars:
+                    variable_data = xds[variable]
+                    interpolated_data[variable] = variable_data.interp(
+                        latitude=target_lat,
+                        longitude=target_lon,
+                        method=interpolation_method
+                    )
+
+                # Convert interpolated data to a DataFrame
+                interpolated_df = pd.concat(
+                    [interpolated_data[var].to_dataframe(name=var).reset_index() for var in interpolated_data],
+                    axis=1
+                )
+                interpolated_df = interpolated_df.loc[:, ~interpolated_df.columns.duplicated()]  # Remove duplicate columns
 
                 # Add metadata columns
-                pdf[source_file_path] = row['path']
-                pdf[ingest_timestamp_column] = pd.Timestamp.now()
-                pdf['data_provider'] = data_provider
-                pdf['source_file'] = xds.attrs.get('source_file', None)
+                interpolated_df[source_file_path] = row['path']
+                interpolated_df[ingest_timestamp_column] = pd.Timestamp.now()
+                interpolated_df['data_provider'] = data_provider
+                interpolated_df['source_file'] = xds.attrs.get('source_file', None)
 
                 # Convert file_modified_in_s3 to datetime
                 file_modified_in_s3 = xds.attrs.get('date_modified_in_s3', None)
                 if file_modified_in_s3:
-                    pdf['file_modified_in_s3'] = pd.to_datetime(file_modified_in_s3)
+                    interpolated_df['file_modified_in_s3'] = pd.to_datetime(file_modified_in_s3)
                 else:
-                    pdf['file_modified_in_s3'] = None
+                    interpolated_df['file_modified_in_s3'] = None
 
-                # Use the specified attribute to populate date_created, set to null if not present
+                # Populate date_created based on specified attribute
                 file_creation_date = xds.attrs.get(date_created_attr, None)
                 if file_creation_date:
-                    pdf['date_created'] = pd.to_datetime(file_creation_date)
+                    interpolated_df['date_created'] = pd.to_datetime(file_creation_date)
                 else:
-                    pdf['date_created'] = None
+                    interpolated_df['date_created'] = None
 
-
-
-                yield pdf.reset_index()  # Reset index to align time with variables  
-
-
-    
+                # Yield the DataFrame for Spark processing
+                yield interpolated_df.reset_index(drop=True)
 
     bronze_table = f"{catalog_name}.{schema_name}.{table_name}"
 
-    autoload = (read_stream
-	.selectExpr("_metadata.file_path as path") # Keep only the file paths, as /Volumes/...
-  	.repartition(64)
-	.mapInPandas(parse_netcdf, output_schema) # Read each file and convert to Dataframe rows
-	.writeStream # Writestream config must go below all the transformations
-	.option("checkpointLocation", checkpoint_location)
-    .option("mergeSchema", "true")
-	.queryName(streaming_query_name)
-	.outputMode(write_mode)
- 	.trigger(availableNow=True) # Runs on new files, then shuts down
-    .toTable(bronze_table))
-                
+    # Autoload configuration for Spark Streaming
+    autoload = (
+        read_stream
+        .selectExpr("_metadata.file_path as path")  # Select only file paths
+        .repartition(64)
+        .mapInPandas(parse_netcdf, output_schema)  # Apply the parse_netcdf function to each batch
+        .writeStream  # Configure the write stream
+        .option("checkpointLocation", checkpoint_location)
+        .option("mergeSchema", "true")
+        .queryName(streaming_query_name)
+        .outputMode(write_mode)
+        .trigger(availableNow=True)  # Runs on new files, then shuts down
+        .toTable(bronze_table)
+    )
 
-  
 
 
 

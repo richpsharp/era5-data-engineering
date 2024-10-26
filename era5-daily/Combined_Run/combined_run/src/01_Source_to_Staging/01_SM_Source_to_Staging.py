@@ -201,7 +201,7 @@ if workspace_url == dev_workspace_url:
     table_name="`era5-daily-data`.bronze_dev.era5_inventory_table"
     
     start_date = '1950-01-01'
-    end_date = '1950-01-31'
+    end_date = '1950-12-31'
     source_folder = '/Volumes/aer-processed/era5/daily_summary'
     prefix = 'reanalysis-era5-sfc-daily-'
     date_pattern = '%Y-%m-%d'

@@ -5,7 +5,8 @@ import shutil
 import netCDF4 as nc 
 
 from delta.tables import DeltaTable
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession 
+from pyspark.sql.types import StructType, StructField, FloatType, StringType, TimestampType, LongType, BinaryType
 
 
 from pyspark.sql.types import DateType, TimestampType
