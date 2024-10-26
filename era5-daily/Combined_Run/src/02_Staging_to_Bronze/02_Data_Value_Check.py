@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC ### 02_SM_Data_Value_Check
+# MAGIC ### Notebook Overview
 # MAGIC
 # MAGIC This notebook is responsible for performing data value checks on key climate variables in the bronze-tier Delta table, ensuring that the data is within expected ranges and identifying any outliers.
 # MAGIC

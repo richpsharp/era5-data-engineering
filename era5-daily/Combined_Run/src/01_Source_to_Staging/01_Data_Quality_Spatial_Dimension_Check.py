@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Notebook Overview: 01_SM_Data_Quality_Spatial_Dimension_Check
+# MAGIC ## Notebook Overview: 
 # MAGIC
 # MAGIC ### Purpose:
 # MAGIC This notebook ensures the spatial quality of NetCDF files used in the ERA5 climate data pipeline. It verifies that the files in the development workspace have the correct spatial dimensions, specifically the expected number of longitude and latitude points, before further processing.

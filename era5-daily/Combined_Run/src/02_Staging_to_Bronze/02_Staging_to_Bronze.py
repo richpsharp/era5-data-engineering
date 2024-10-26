@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC ### Notebook Overview: 02_HK_SM_Staging_to_Bronze
+# MAGIC ### Notebook Overview
 # MAGIC
 # MAGIC This notebook is responsible for processing data from the staging area and moving it to the bronze-tier Delta table. The process involves continuous streaming ingestion of NetCDF files, using Databricks' autoloader, to efficiently load and append data to the bronze table.
 # MAGIC

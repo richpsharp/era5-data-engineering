@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC ### 02_SM_Date_Range_Check
+# MAGIC ### Notebook Overview
 # MAGIC
 # MAGIC This notebook is responsible for checking the completeness of the date range in the ERA5 bronze-tier dataset. It identifies whether there are any missing dates within the dataset and outputs the results.
 # MAGIC

@@ -1,7 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC
-# MAGIC ## Notebook Overview: 02_SM_Source_to_Bronze_Country_Boundaries
+# MAGIC ## Notebook Overview
 # MAGIC
 # MAGIC ### Objective:
 # MAGIC This notebook is designed to process and transform country boundary shapefiles into bronze-tier Delta tables within the Databricks environment. It ensures that the geometries are properly transformed and stored, while handling execution logic based on the current workspace environment.
