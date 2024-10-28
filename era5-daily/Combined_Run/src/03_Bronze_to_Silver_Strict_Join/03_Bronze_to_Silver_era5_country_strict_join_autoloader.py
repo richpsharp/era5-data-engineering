@@ -268,8 +268,8 @@ dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
 # Conditional logic to set the parameter values based on the workspace URL
 if workspace_url == dev_workspace_url:
     # Set the parameters for the dev workspace
-    bronze_era5_table = "`era5-daily-data`.bronze_dev.aer_era5_bronze_1950_to_present_test"
-    target_silver_table = "`era5-daily-data`.silver_dev.aer_era5_silver_strict_1950_to_present_test"
+    bronze_era5_table = "`era5-daily-data`.bronze_dev.aer_era5_bronze_1950_to_present_dev_interpolation"
+    target_silver_table = "`era5-daily-data`.silver_dev.aer_era5_silver_strict_1950_to_present_dev_interpolation"
     country_index_table = "`era5-daily-data`.silver_dev.esri_worldcountryboundaries_global_silver"
     checkpoint = "/Volumes/era5-daily-data/silver_dev/checkpoints/era5_silver_country_strict_dev"
 

@@ -84,9 +84,9 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
 
-  # Job 3: era5_staging_to_bronze_job
-  deploy_era5_staging_to_bronze:
-    name: "Deploy era5_staging_to_bronze_job"
+  # Job 3: era5_staging_to_bronze_interpolation_job
+  deploy_era5_staging_to_bronze_interpolation:
+    name: "Deploy era5_staging_to_bronze_interpolation_job"
     runs-on: ubuntu-latest
     needs:
       - run_era5_source_to_bronze_country_boundaries
@@ -103,11 +103,11 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
           DATABRICKS_BUNDLE_ENV: dev
 
-  run_era5_staging_to_bronze:
-    name: "Run era5_staging_to_bronze_job"
+  run_era5_staging_to_bronze_interpolation:
+    name: "Run era5_staging_to_bronze_interpolation_job"
     runs-on: ubuntu-latest
     needs:
-      - deploy_era5_staging_to_bronze
+      - deploy_era5_staging_to_bronze_interpolation
 
     steps:
       - uses: actions/checkout@v3
@@ -115,7 +115,7 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle run era5_staging_to_bronze_job --refresh-all
+      - run: databricks bundle run era5_staging_to_bronze_interpolation_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
@@ -126,7 +126,7 @@ jobs:
     name: "Deploy era5_bronze_to_silver_country_indices_job"
     runs-on: ubuntu-latest
     needs:
-      - run_era5_staging_to_bronze
+      - run_era5_staging_to_bronze_interpolation
 
     steps:
       - uses: actions/checkout@v3

@@ -119,7 +119,7 @@ if workspace_url == dev_workspace_url:
     reference_ds_path = '/Volumes/cmip6-daily-data/gwsc-cmip6-daily/nex-gddp-cmip6/ACCESS-ESM1-5/ssp126/pr/pr_day_ACCESS-ESM1-5_ssp126_r1i1p1f1_gn_2040_v1.1.nc'
     streaming_query_name = 'Load ERA5 Files'
     data_format = 'delta'
-    table_name = 'aer_era5_bronze_1950_to_present_test'
+    table_name = 'aer_era5_bronze_1950_to_present_dev_interpolation'
     schema_name = 'bronze_dev'
     catalog_name = '`era5-daily-data`'
     write_mode = 'append'

@@ -67,40 +67,40 @@ resources:
             data_security_mode: "SINGLE_USER"  # Enforcing Single user access mode
             single_user_name: "smajumder1@ua.edu"  # Username
 
-    era5_staging_to_bronze_job:
-      name: era5_staging_to_bronze_job
+    era5_staging_to_bronze_interpolation_job:
+      name: era5_staging_to_bronze_interpolation_job
       depends_on: 
         - era5_source_to_bronze_country_boundaries_job  # Depends on the previous job
 
       tasks:
         - task_key: unit_tests_task
-          job_cluster_key: era5_staging_to_bronze  # Updated job cluster key
+          job_cluster_key: era5_staging_to_bronze_interpolation  # Updated job cluster key
           notebook_task:
             notebook_path: ../tests/02_Staging_to_Bronze/staging-to-bronze-run-unit-test.py
 
         - task_key: run_on_sample_task
           depends_on:
             - task_key: unit_tests_task
-          job_cluster_key: era5_staging_to_bronze  # Updated job cluster key
+          job_cluster_key: era5_staging_to_bronze_interpolation  # Updated job cluster key
           notebook_task:
             notebook_path: ../src/02_Staging_to_Bronze/02_Staging_to_Bronze.py
 
         - task_key: data_value_check_task
           depends_on:
             - task_key: run_on_sample_task  # Depends on the previous notebook
-          job_cluster_key: era5_staging_to_bronze  # Updated job cluster key
+          job_cluster_key: era5_staging_to_bronze_interpolation  # Updated job cluster key
           notebook_task:
             notebook_path: ../src/02_Staging_to_Bronze/02_Data_Value_Check.py  # Path to the new notebook
 
         - task_key: date_range_check_task
           depends_on:
             - task_key: data_value_check_task  # Depends on the data value check notebook
-          job_cluster_key: era5_staging_to_bronze  # Updated job cluster key
+          job_cluster_key: era5_staging_to_bronze_interpolation  # Updated job cluster key
           notebook_task:
             notebook_path: ../src/02_Staging_to_Bronze/02_Date_Range_Check.py  # Path to the new notebook
 
       job_clusters:
-        - job_cluster_key: era5_staging_to_bronze  # Updated job cluster key
+        - job_cluster_key: era5_staging_to_bronze_interpolation  # Updated job cluster key
           new_cluster:
             spark_version: 14.3.x-scala2.12  # Updated Spark version
             node_type_id: r5d.xlarge  # Updated node type
@@ -115,7 +115,7 @@ resources:
     era5_bronze_to_silver_country_indices_job:
       name: era5_bronze_to_silver_country_indices_job
       depends_on: 
-        - era5_staging_to_bronze_job  # Depends on the previous job
+        - era5_staging_to_bronze_interpolation_job  # Depends on the previous job
 
       tasks:
         - task_key: unit_tests_task
@@ -175,7 +175,7 @@ resources:
             runtime_engine: "PHOTON"  # Enabling Photon acceleration
             init_scripts:
               - workspace:
-                  destination: "/Workspace/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/Combined_Run/combined_run/geospatial/mosaic/gdal/jammy/mosaic-gdal-init.sh"
+                  destination: "/Workspace/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/Combined_Run/geospatial/mosaic/gdal/jammy/mosaic-gdal-init.sh"
             autoscale:
               min_workers: 4
               max_workers: 8 
@@ -208,7 +208,7 @@ resources:
             runtime_engine: "PHOTON"  # Enabling Photon acceleration
             init_scripts:
               - workspace:
-                  destination: "/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/Combined_Run/combined_run/geospatial/mosaic/gdal/jammy/mosaic-gdal-init.sh"
+                  destination: "/Workspace/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/Combined_Run/geospatial/mosaic/gdal/jammy/mosaic-gdal-init.sh"
             autoscale:
               min_workers: 2  # Updated minimum workers
               max_workers: 8  # Updated maximum workers
@@ -243,7 +243,7 @@ resources:
             runtime_engine: "PHOTON"  # Enabling Photon acceleration
             init_scripts:
               - workspace:
-                  destination: "/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/Combined_Run/combined_run/geospatial/mosaic/gdal/jammy/mosaic-gdal-init.sh"
+                  destination: "/Workspace/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/Combined_Run/geospatial/mosaic/gdal/jammy/mosaic-gdal-init.sh"
             autoscale:
               min_workers: 2  # Updated minimum workers
               max_workers: 8  # Updated maximum workers

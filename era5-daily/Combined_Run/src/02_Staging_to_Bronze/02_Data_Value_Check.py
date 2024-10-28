@@ -43,7 +43,7 @@ if workspace_url == dev_workspace_url:
     # If in the dev workspace, set the catalog, schema, and table names
     catalog = '`era5-daily-data`'
     schema = 'bronze_dev'
-    table = 'aer_era5_bronze_1950_to_present_test'
+    table = 'aer_era5_bronze_1950_to_present_dev_interpolation'
     
     # Construct the full table name
     full_table_name = f"{catalog}.{schema}.{table}"
