@@ -1,4 +1,4 @@
-# Combined ERA5 Workflow
+## Combined ERA5 Workflow
 
 name: "Combined ERA5 Workflow"
 
@@ -22,12 +22,14 @@ jobs:
       # Download the Databricks CLI.
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
+      
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
-          DATABRICKS_BUNDLE_ENV: dev
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.ERA5_DATA_ENGINEERING }}
 
   run_era5_source_to_staging:
     name: "Run era5_source_to_staging_job"
@@ -40,12 +42,14 @@ jobs:
       # Download the Databricks CLI.
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
+      
 
       - run: databricks bundle run era5_source_to_staging_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
-          DATABRICKS_BUNDLE_ENV: dev
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.ERA5_DATA_ENGINEERING }}
 
   # Job 2: era5_source_to_bronze_country_boundaries_job
   deploy_era5_source_to_bronze_country_boundaries:
@@ -63,8 +67,9 @@ jobs:
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
-          DATABRICKS_BUNDLE_ENV: dev
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.ERA5_DATA_ENGINEERING }}
 
   run_era5_source_to_bronze_country_boundaries:
     name: "Run era5_source_to_bronze_country_boundaries_job"
@@ -81,8 +86,9 @@ jobs:
       - run: databricks bundle run era5_source_to_bronze_country_boundaries_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
-          DATABRICKS_BUNDLE_ENV: dev
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.ERA5_DATA_ENGINEERING }}
 
   # Job 3: era5_staging_to_bronze_interpolation_job
   deploy_era5_staging_to_bronze_interpolation:
@@ -100,8 +106,9 @@ jobs:
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
-          DATABRICKS_BUNDLE_ENV: dev
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.ERA5_DATA_ENGINEERING }}
 
   run_era5_staging_to_bronze_interpolation:
     name: "Run era5_staging_to_bronze_interpolation_job"
@@ -118,8 +125,9 @@ jobs:
       - run: databricks bundle run era5_staging_to_bronze_interpolation_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
-          DATABRICKS_BUNDLE_ENV: dev
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.ERA5_DATA_ENGINEERING }}
 
   # Job 4: era5_bronze_to_silver_country_indices_job
   deploy_era5_bronze_to_silver_country_indices:
@@ -137,8 +145,9 @@ jobs:
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
-          DATABRICKS_BUNDLE_ENV: dev
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.ERA5_DATA_ENGINEERING }}
 
   run_era5_bronze_to_silver_country_indices:
     name: "Run era5_bronze_to_silver_country_indices_job"
@@ -155,8 +164,9 @@ jobs:
       - run: databricks bundle run era5_bronze_to_silver_country_indices_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
-          DATABRICKS_BUNDLE_ENV: dev
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.ERA5_DATA_ENGINEERING }}
 
   # Job 5: era5_bronze_to_silver_approximate_join_job
   deploy_era5_bronze_to_silver_approximate_join:
@@ -174,8 +184,9 @@ jobs:
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
-          DATABRICKS_BUNDLE_ENV: dev
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.ERA5_DATA_ENGINEERING }}
 
   run_era5_bronze_to_silver_approximate_join:
     name: "Run era5_bronze_to_silver_approximate_join_job"
@@ -192,8 +203,9 @@ jobs:
       - run: databricks bundle run era5_bronze_to_silver_approximate_join_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
-          DATABRICKS_BUNDLE_ENV: dev
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.ERA5_DATA_ENGINEERING }}
 
   # Job 6: era5_bronze_to_silver_strict_join_job
   deploy_era5_bronze_to_silver_strict_join:
@@ -211,8 +223,9 @@ jobs:
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
-          DATABRICKS_BUNDLE_ENV: dev
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.ERA5_DATA_ENGINEERING }}
 
   run_era5_bronze_to_silver_strict_join:
     name: "Run era5_bronze_to_silver_strict_join_job"
@@ -229,5 +242,6 @@ jobs:
       - run: databricks bundle run era5_bronze_to_silver_strict_join_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DATA_ENGINEERING_TOKEN }}
-          DATABRICKS_BUNDLE_ENV: dev
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.ERA5_DATA_ENGINEERING }}

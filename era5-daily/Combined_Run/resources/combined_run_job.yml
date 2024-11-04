@@ -1,8 +1,25 @@
-# The main job for combined_run.
+############### The main job for combined_run ############
+############ ### #### #### ###
+
+targets:
+  dev:
+    mode: development
+    run_as:
+      - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
+    presets:
+      trigger_pause_status: PAUSED ## we can define a schedule for deployment ## PAUSED means schedule is paused
+      jobs_max_concurrent_runs: 10
+      tags:
+        environment: development
+        team: data-engineering
+
 resources:
   jobs:
     era5_source_to_staging_job:
       name: era5_source_to_staging_job
+      permissions:
+        - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
+          level: CAN_MANAGE   ## use CAN_MANAGE to gain access to UC cluster
       tasks:
         - task_key: unit_tests_task
           job_cluster_key: era5_source_to_staging  # job cluster key
@@ -28,18 +45,26 @@ resources:
           new_cluster:
             spark_version: 14.3.x-scala2.12 
             node_type_id: r5d.xlarge  
+            custom_tags: 
+              team: "data-engineering"
+              pipeline: "era5-source-to-staging"
             aws_attributes:
               first_on_demand: 1
             autoscale:
               min_workers: 2  
               max_workers: 8  
             data_security_mode: "SINGLE_USER"  # Enforcing Single user access mode
-            single_user_name: "smajumder1@ua.edu"  # username
+            single_user_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"  # unique identifier
+
+    
 
     era5_source_to_bronze_country_boundaries_job:
       name: era5_source_to_bronze_country_boundaries_job
       depends_on: 
         - era5_source_to_staging_job  # Depends on the previous job
+      permissions:
+        - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
+          level: CAN_MANAGE   ## use CAN_MANAGE to gain access to UC cluster
 
       tasks:
         - task_key: unit_tests_task
@@ -59,18 +84,27 @@ resources:
           new_cluster:
             spark_version: 15.1.x-scala2.12  # Keeping the original Spark version
             node_type_id: r6id.xlarge  # node type
+            custom_tags:
+              team: "data-engineering"
+              pipeline: "era5-source-to-bronze-country-boundaries" 
             aws_attributes:
               first_on_demand: 1
             autoscale:
               min_workers: 2  # Minimum workers 
               max_workers: 8  # Maximum workers 
             data_security_mode: "SINGLE_USER"  # Enforcing Single user access mode
-            single_user_name: "smajumder1@ua.edu"  # Username
+            single_user_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"  # ApplicationID/ClientID
+
+  
 
     era5_staging_to_bronze_interpolation_job:
       name: era5_staging_to_bronze_interpolation_job
       depends_on: 
         - era5_source_to_bronze_country_boundaries_job  # Depends on the previous job
+
+      permissions:
+        - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
+          level: CAN_MANAGE   ## use CAN_MANAGE to gain access to UC cluster
 
       tasks:
         - task_key: unit_tests_task
@@ -104,18 +138,27 @@ resources:
           new_cluster:
             spark_version: 14.3.x-scala2.12  # Updated Spark version
             node_type_id: r5d.xlarge  # Updated node type
+            custom_tags: 
+              team: "data-engineering"
+              pipeline: "era5-staging-to-bronze-interpolation"
             aws_attributes:
               first_on_demand: 1
             autoscale:
               min_workers: 2  # minimum workers
               max_workers: 8  # maximum workers
             data_security_mode: "SINGLE_USER"  # Enforcing Single user access mode
-            single_user_name: "smajumder1@ua.edu"  # Username
+            single_user_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"  # ApplicationID/ClientID
+
+
 
     era5_bronze_to_silver_country_indices_job:
       name: era5_bronze_to_silver_country_indices_job
       depends_on: 
-        - era5_staging_to_bronze_interpolation_job  # Depends on the previous job
+        - era5_staging_to_bronze_interpolation_job  # Depends on the previous job 
+
+      permissions:
+        - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
+          level: CAN_MANAGE   ## use CAN_MANAGE to gain access to UC cluster
 
       tasks:
         - task_key: unit_tests_task
@@ -170,20 +213,29 @@ resources:
           new_cluster:
             spark_version: 13.3.x-scala2.12  # Updated Spark version
             node_type_id: r5d.4xlarge  # node type
+            custom_tags:
+              team: "data-engineering"
+              pipeline: "era5-bronze-to-silver-country-indices"
             aws_attributes:
               first_on_demand: 1
             runtime_engine: "PHOTON"  # Enabling Photon acceleration
             init_scripts:
               - workspace:
-                  destination: "/Workspace/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/Combined_Run/geospatial/mosaic/gdal/jammy/mosaic-gdal-init.sh"
+                  destination: "/Workspace/Shared/geospatial/mosaic/gdal/jammy/0.4.2/mosaic-gdal-init.sh"
             autoscale:
               min_workers: 4
               max_workers: 8 
             data_security_mode: "SINGLE_USER"  # Enforcing Single user access mode
-            single_user_name: "smajumder1@ua.edu"  # Username
+            single_user_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"  # ApplicationID/ClientID
+
+
 
     era5_bronze_to_silver_approximate_join_job:
       name: era5_bronze_to_silver_approximate_join_job
+
+      permissions:
+        - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
+          level: CAN_MANAGE   ## use CAN_MANAGE to gain access to UC cluster
 
       tasks:
         - task_key: unit_tests_task
@@ -203,20 +255,29 @@ resources:
           new_cluster:
             spark_version: 13.3.x-scala2.12  # Updated Spark version
             node_type_id: i3.xlarge  # node type
+            custom_tags: 
+              team: "data-engineering"
+              pipeline: "era5-bronze-to-silver-approximate-join"
             aws_attributes:
               first_on_demand: 1
             runtime_engine: "PHOTON"  # Enabling Photon acceleration
             init_scripts:
               - workspace:
-                  destination: "/Workspace/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/Combined_Run/geospatial/mosaic/gdal/jammy/mosaic-gdal-init.sh"
+                  destination: "/Workspace/Shared/geospatial/mosaic/gdal/jammy/0.4.2/mosaic-gdal-init.sh"
             autoscale:
               min_workers: 2  # Updated minimum workers
               max_workers: 8  # Updated maximum workers
             data_security_mode: "SINGLE_USER"  # Enforcing Single user access mode
-            single_user_name: "smajumder1@ua.edu"  # Username 
+            single_user_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"  # ApplicationID/ClientID  
+
 
     era5_bronze_to_silver_strict_join_job:
       name: era5_bronze_to_silver_strict_join_job
+
+      permissions:
+        - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
+          level: CAN_MANAGE   ## use CAN_MANAGE to gain access to UC cluster
+      
       depends_on: 
         - era5_bronze_to_silver_approximate_join_job  # Depends on the previous job
 
@@ -238,14 +299,19 @@ resources:
           new_cluster:
             spark_version: 13.3.x-scala2.12  # Updated Spark version
             node_type_id: i3.xlarge  # node type
+            custom_tags: 
+              team: "data-engineering"
+              pipeline: "era5-bronze-to-silver-strict-join"
             aws_attributes:
               first_on_demand: 1
             runtime_engine: "PHOTON"  # Enabling Photon acceleration
             init_scripts:
               - workspace:
-                  destination: "/Workspace/Users/smajumder1@ua.edu/Data-Engineering/era5-daily/Combined_Run/geospatial/mosaic/gdal/jammy/mosaic-gdal-init.sh"
+                  destination: "/Workspace/Shared/geospatial/mosaic/gdal/jammy/0.4.2/mosaic-gdal-init.sh"
             autoscale:
               min_workers: 2  # Updated minimum workers
               max_workers: 8  # Updated maximum workers
             data_security_mode: "SINGLE_USER"  # Enforcing Single user access mode
-            single_user_name: "smajumder1@ua.edu"  # Username
+            single_user_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"  # ApplicationID/ClientID
+
+

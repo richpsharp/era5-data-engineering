@@ -44,6 +44,11 @@ import math
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC **make sure the main catalog has permissions** 
+
+# COMMAND ----------
+
 import unittest
 from pyspark.sql import SparkSession
 

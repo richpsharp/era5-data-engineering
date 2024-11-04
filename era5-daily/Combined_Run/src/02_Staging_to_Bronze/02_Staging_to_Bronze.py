@@ -116,7 +116,7 @@ if workspace_url == dev_workspace_url:
     # If in the dev workspace, run on a small subset of the data
     source_file_location = '/Volumes/era5-daily-data/bronze_dev/era5_gwsc_staging_folder'
     checkpoint_location = '/Volumes/era5-daily-data/bronze_dev/checkpoints/source_to_bronze_era5'
-    reference_ds_path = '/Volumes/cmip6-daily-data/gwsc-cmip6-daily/nex-gddp-cmip6/ACCESS-ESM1-5/ssp126/pr/pr_day_ACCESS-ESM1-5_ssp126_r1i1p1f1_gn_2040_v1.1.nc'
+    reference_ds_path = '/Volumes/cmip6-daily-data/gwsc-cmip6-daily/nex-gddp-cmip6/ACCESS-ESM1-5/ssp245/pr/pr_day_ACCESS-ESM1-5_ssp245_r1i1p1f1_gn_2040_v1.1.nc'
     streaming_query_name = 'Load ERA5 Files'
     data_format = 'delta'
     table_name = 'aer_era5_bronze_1950_to_present_dev_interpolation'

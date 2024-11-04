@@ -75,7 +75,7 @@ if last_execution_time is None or datetime.now() - last_execution_time >= timede
         end_year = int(2100)
         models = ['ACCESS-ESM1-5', 'BCC-CSM2-MR','CanESM5','CMCC-ESM2']
         variables = ['tas','pr','tasmin','tasmax']
-        scenarios = ['historical', 'ssp126', 'ssp370', 'ssp585']
+        scenarios = ['historical', 'ssp126', 'ssp370', 'ssp585'] ## add ssp245
         output_folder = '/Volumes/cmip6-daily-data/gwsc-cmip6-daily/nex-gddp-cmip6'
         num_workers = 30  # dependent on the cores
 
