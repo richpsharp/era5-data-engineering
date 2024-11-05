@@ -21,7 +21,7 @@
 
 # MAGIC
 # MAGIC %pip install numpy==1.26.4 ## please use this version of numpy ## DO NOT USE THE LATEST VERSION ## LATEST VERSION WILL CAUSE NOTEBOOK TO CRASH
-# MAGIC %pip install databricks-mosaic
+# MAGIC ## %pip install databricks-mosaic
 
 # COMMAND ----------
 
@@ -47,6 +47,7 @@ dbutils.library.restartPython()
 # MAGIC - **delta.tables.DeltaTable**: Facilitates operations on Delta tables, which allow for ACID transactions and scalable metadata handling in Spark.
 # MAGIC - **pyspark.sql.window.Window**: Enables the definition of window frames for operations over rows of a DataFrame based on certain ordering or partitioning criteria.
 # MAGIC
+# MAGIC **MOSAIC IS PROABABLY NOT USED**
 # MAGIC #### Mosaic Initialization:
 # MAGIC - **mosaic (imported as mos)**: The `mosaic` module from the `databricks-mosaic` library is imported to leverage advanced geospatial functionalities within Databricks.
 # MAGIC - **mos.enable_mosaic(spark, dbutils)**: This function call initializes the Mosaic library, integrating it with the current Spark session and dbutils, enabling advanced geospatial functionalities within the Databricks environment. 
@@ -67,8 +68,8 @@ from delta.tables import DeltaTable
 from pyspark.sql.window import Window
 
 
-import mosaic as mos
-mos.enable_mosaic(spark, dbutils)
+#import mosaic as mos
+#mos.enable_mosaic(spark, dbutils)
 
 
 

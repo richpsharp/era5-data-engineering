@@ -43,8 +43,8 @@ resources:
       job_clusters:
         - job_cluster_key: era5_source_to_staging  # job cluster key
           new_cluster:
-            spark_version: 14.3.x-scala2.12 
-            node_type_id: r5d.xlarge  
+            spark_version: 15.4.x-scala2.12 # Trying with a higher spark version 
+            node_type_id: r6id.xlarge  # node type ##   
             custom_tags: 
               team: "data-engineering"
               pipeline: "era5-source-to-staging"
@@ -82,7 +82,7 @@ resources:
       job_clusters:
         - job_cluster_key: era5_country_boundaries 
           new_cluster:
-            spark_version: 15.1.x-scala2.12  # Keeping the original Spark version
+            spark_version: 15.4.x-scala2.12  # Trying with a higher spark version 
             node_type_id: r6id.xlarge  # node type
             custom_tags:
               team: "data-engineering"
@@ -124,20 +124,27 @@ resources:
             - task_key: run_on_sample_task  # Depends on the previous notebook
           job_cluster_key: era5_staging_to_bronze_interpolation  # Updated job cluster key
           notebook_task:
-            notebook_path: ../src/02_Staging_to_Bronze/02_Data_Value_Check.py  # Path to the new notebook
+            notebook_path: ../src/02_Staging_to_Bronze/02_Data_Value_Check.py  # Path to notebook
 
         - task_key: date_range_check_task
           depends_on:
             - task_key: data_value_check_task  # Depends on the data value check notebook
           job_cluster_key: era5_staging_to_bronze_interpolation  # Updated job cluster key
           notebook_task:
-            notebook_path: ../src/02_Staging_to_Bronze/02_Date_Range_Check.py  # Path to the new notebook
+            notebook_path: ../src/02_Staging_to_Bronze/02_Date_Range_Check.py  # Path to notebook
+
+        - task_key: data_duplication_check_task
+          depends_on:
+            - task_key: date_range_check_task  # Depends on the date range check notebook
+          job_cluster_key: era5_staging_to_bronze_interpolation  # Updated job cluster key
+          notebook_task:
+            notebook_path: ../src/02_Staging_to_Bronze/02_Check_Data_Duplication.py  # Path to notebook
 
       job_clusters:
         - job_cluster_key: era5_staging_to_bronze_interpolation  # Updated job cluster key
           new_cluster:
-            spark_version: 14.3.x-scala2.12  # Updated Spark version
-            node_type_id: r5d.xlarge  # Updated node type
+            spark_version: 15.4.x-scala2.12  # Trying with a higher spark version 
+            node_type_id: r6id.xlarge  # node type
             custom_tags: 
               team: "data-engineering"
               pipeline: "era5-staging-to-bronze-interpolation"
@@ -211,7 +218,7 @@ resources:
       job_clusters:
         - job_cluster_key: era5_country_indices
           new_cluster:
-            spark_version: 13.3.x-scala2.12  # Updated Spark version
+            spark_version: 13.3.x-scala2.12  # older Spark version for mosaic
             node_type_id: r5d.4xlarge  # node type
             custom_tags:
               team: "data-engineering"
@@ -250,20 +257,25 @@ resources:
           notebook_task:
             notebook_path: ../src/03_Bronze_to_Silver_Approximate_Join/03_Bronze_to_Silver_era5_country_approximate_join_autoloader.py
 
+        - task_key: data_duplication_check_task
+          depends_on:
+            - task_key: run_on_sample_task  # Depends on the run on sample task 
+          job_cluster_key: era5_approximate_join  # Updated job cluster key
+          notebook_task:
+            notebook_path: ../src/03_Bronze_to_Silver_Approximate_Join/03_Check_Data_Duplication_Approximate_Join.py  # Path to notebook
+
       job_clusters:
         - job_cluster_key: era5_approximate_join  # job cluster key
           new_cluster:
-            spark_version: 13.3.x-scala2.12  # Updated Spark version
-            node_type_id: i3.xlarge  # node type
+            spark_version: 15.4.x-scala2.12  # Trying with a higher spark version 
+            node_type_id: r6id.xlarge  # node type ##
             custom_tags: 
               team: "data-engineering"
               pipeline: "era5-bronze-to-silver-approximate-join"
             aws_attributes:
               first_on_demand: 1
             runtime_engine: "PHOTON"  # Enabling Photon acceleration
-            init_scripts:
-              - workspace:
-                  destination: "/Workspace/Shared/geospatial/mosaic/gdal/jammy/0.4.2/mosaic-gdal-init.sh"
+            
             autoscale:
               min_workers: 2  # Updated minimum workers
               max_workers: 8  # Updated maximum workers
@@ -292,13 +304,20 @@ resources:
             - task_key: unit_tests_task
           job_cluster_key: era5_strict_join  # job cluster key
           notebook_task:
-            notebook_path: ../src/03_Bronze_to_Silver_Strict_Join/03_Bronze_to_Silver_era5_country_strict_join_autoloader.py
+            notebook_path: ../src/03_Bronze_to_Silver_Strict_Join/03_Bronze_to_Silver_era5_country_strict_join_autoloader.py 
+
+        - task_key: data_duplication_check_task
+          depends_on:
+            - task_key: run_on_sample_task  # Depends on the run on sample task 
+          job_cluster_key: era5_strict_join  # Updated job cluster key
+          notebook_task:
+            notebook_path: ../src/03_Bronze_to_Silver_Strict_Join/03_Check_Data_Duplication_Strict_Join.py  # Path to notebook
 
       job_clusters:
         - job_cluster_key: era5_strict_join  # job cluster key
           new_cluster:
-            spark_version: 13.3.x-scala2.12  # Updated Spark version
-            node_type_id: i3.xlarge  # node type
+            spark_version: 13.3.x-scala2.12  # older Spark version for mosaic
+            node_type_id: r5d.4xlarge  # node type
             custom_tags: 
               team: "data-engineering"
               pipeline: "era5-bronze-to-silver-strict-join"

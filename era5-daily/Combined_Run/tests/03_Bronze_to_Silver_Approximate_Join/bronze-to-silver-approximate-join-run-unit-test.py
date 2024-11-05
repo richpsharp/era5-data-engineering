@@ -4,7 +4,7 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install databricks-mosaic
+#%pip install databricks-mosaic
 
 # COMMAND ----------
 
@@ -19,8 +19,8 @@ from delta.tables import DeltaTable
 from pyspark.sql.window import Window 
 
 
-import mosaic as mos
-mos.enable_mosaic(spark, dbutils)
+#import mosaic as mos
+#mos.enable_mosaic(spark, dbutils)
 
 # COMMAND ----------
 
