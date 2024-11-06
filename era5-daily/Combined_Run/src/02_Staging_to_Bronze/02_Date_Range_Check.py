@@ -64,10 +64,16 @@ if workspace_url == dev_workspace_url:
     # Join with the original DataFrame to find missing dates
     missing_dates = full_dates.join(df, full_dates["date"] == df["time"], "leftanti")
     
-    # Check if there are any missing dates and display them or print a message
+    # Check if there are any missing dates and display them or save them
     if missing_dates.count() > 0:
         print("Missing dates:")
         missing_dates.show()
+
+        # Define the Delta table name for storing missing dates
+        missing_dates_table = f"{catalog}.{schema}.missing_dates"
+    
+        # Save the missing dates as a Delta table
+        missing_dates.write.format("delta").mode("overwrite").saveAsTable(missing_dates_table)
     else:
         print("There are no missing dates in this range.")
 else:
