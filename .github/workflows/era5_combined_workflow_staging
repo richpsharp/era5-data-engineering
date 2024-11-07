@@ -15,6 +15,7 @@ jobs:
   deploy_era5_source_to_staging:
     name: "Deploy era5_source_to_staging_job"
     runs-on: ubuntu-latest
+    if: github.base_ref == 'staging' && github.head_ref == 'dev-main'  # Check if PR is from dev-main to staging
 
     steps:
       # Check out this repo, so that this workflow can access it.
