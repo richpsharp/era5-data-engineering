@@ -38,8 +38,8 @@ jobs:
           elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
             echo "Using staging secrets"
             echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
           else
             echo "Unknown base branch"
             exit 1
@@ -75,8 +75,8 @@ jobs:
           elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
             echo "Using staging secrets"
             echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
           else
             echo "Unknown base branch"
             exit 1
@@ -113,8 +113,8 @@ jobs:
           elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
             echo "Using staging secrets"
             echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
           else
             echo "Unknown base branch"
             exit 1
@@ -150,8 +150,8 @@ jobs:
           elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
             echo "Using staging secrets"
             echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
           else
             echo "Unknown base branch"
             exit 1
@@ -188,8 +188,8 @@ jobs:
           elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
             echo "Using staging secrets"
             echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
           else
             echo "Unknown base branch"
             exit 1
@@ -225,8 +225,8 @@ jobs:
           elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
             echo "Using staging secrets"
             echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
           else
             echo "Unknown base branch"
             exit 1
@@ -264,8 +264,8 @@ jobs:
           elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
             echo "Using staging secrets"
             echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
           else
             echo "Unknown base branch"
             exit 1
@@ -301,8 +301,8 @@ jobs:
           elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
             echo "Using staging secrets"
             echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
           else
             echo "Unknown base branch"
             exit 1
@@ -339,8 +339,8 @@ jobs:
           elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
             echo "Using staging secrets"
             echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
           else
             echo "Unknown base branch"
             exit 1
@@ -376,8 +376,8 @@ jobs:
           elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
             echo "Using staging secrets"
             echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
           else
             echo "Unknown base branch"
             exit 1
@@ -414,8 +414,8 @@ jobs:
           elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
             echo "Using staging secrets"
             echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
           else
             echo "Unknown base branch"
             exit 1
@@ -451,8 +451,8 @@ jobs:
           elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
             echo "Using staging secrets"
             echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
-            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
           else
             echo "Unknown base branch"
             exit 1
