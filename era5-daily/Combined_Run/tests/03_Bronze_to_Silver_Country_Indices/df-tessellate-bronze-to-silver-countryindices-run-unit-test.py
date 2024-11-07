@@ -1,4 +1,25 @@
 # Databricks notebook source
+from pyspark.sql import SparkSession
+
+
+
+# Get the current workspace URL
+workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.workspaceUrl", None)
+
+# Dev workspace URL
+dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
+
+# COMMAND ----------
+
+if workspace_url != dev_workspace_url: 
+    ## Skip the rest of the notebook
+    dbutils.notebook.exit("Not in dev workspace. Skipping unit tests.")
+
+else: 
+    print("We are in dev workspace, proceed with the unit test")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ### Setup
 

@@ -64,6 +64,26 @@ print(workspace_url)
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC **Dev workspace URL**
+
+# COMMAND ----------
+
+# Dev workspace URL
+dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC **Staging workspace URL**
+
+# COMMAND ----------
+
+# Staging workspace URL
+staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ### Processing Shapefile to Delta Table Based on Workspace URL
 # MAGIC
 # MAGIC This section of the notebook checks the current workspace URL to determine if the script should execute the shapefile processing function.
@@ -89,7 +109,7 @@ print(workspace_url)
 
 
 # Check the workspace URL and set the delta table name or prevent execution
-if workspace_url == 'dbc-ad3d47af-affb.cloud.databricks.com':
+if workspace_url == dev_workspace_url:
     delta_table_name = '`era5-daily-data`.bronze_dev.esri_worldcountryboundaries_global_bronze_test'
 
     # Example usage
@@ -100,6 +120,21 @@ if workspace_url == 'dbc-ad3d47af-affb.cloud.databricks.com':
         batch_size=100,
         target_crs=4326  # Set this to the EPSG code of the target CRS ## this will transform the file 
     )
+
+elif workspace_url == staging_workspace_url:
+
+    delta_table_name = '`era5-daily-data`.bronze_staging.esri_worldcountryboundaries_global_bronze'
+
+    # Example usage
+    process_shapefile_to_delta(
+        spark,
+        shapefile_path='/Volumes/pilot/vector_files/country_boundaries/countries.shp',
+        delta_table_name=delta_table_name,
+        batch_size=100,
+        target_crs=4326  # Set this to the EPSG code of the target CRS ## this will transform the file 
+    )
+
+
 else:
     print(f"Script is not configured to run in this workspace: {workspace_url}. Exiting...")
 

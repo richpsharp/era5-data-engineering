@@ -276,6 +276,9 @@ workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.wo
 # Dev workspace URL
 dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
 
+# Staging workspace URL
+staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
+
 # Conditional logic to set the parameter values based on the workspace URL
 if workspace_url == dev_workspace_url:
     # Set the parameters for the dev workspace
@@ -364,8 +367,100 @@ if workspace_url == dev_workspace_url:
 
     write_stream.awaitTermination()  # Keeps later cells from running until the stream is done
 
-    print("Function executed in the dev workspace on a small subset of the data.")
+    print("Function executed in the dev workspace on a small subset of the data.") 
+
+elif workspace_url == staging_workspace_url: 
+
+    # Set the parameters for the staging workspace
+    bronze_era5_table = "`era5-daily-data`.bronze_staging.aer_era5_bronze_1950_to_present_staging_interpolation"
+    target_silver_table = "`era5-daily-data`.silver_staging.aer_era5_silver_approximate_1950_to_present_staging_interpolation"
+    country_index_table = "`era5-daily-data`.silver_staging.esri_worldcountryboundaries_global_silver"
+    checkpoint = "/Volumes/era5-daily-data/silver_staging/checkpoints/era5_silver_country_approximate_staging"
+
+    ### Latitude column of the bronze table
+    lat_col = "latitude"
+
+    ## Longitude column of the silver table
+    lon_col = "longitude"
+
+    ## tessellation resolution
+    target_resolution = 5
+
+    ### sequence column 
+    sequence_col = "date_created"
+
+    # These are the columns that uniquely identify a record in the Silver table so we can find it and update it with revisions.
+    silver_merge_keys = ["time", lat_col, lon_col]
+
+
+    # require some help accurately documenting this
+    # E.g. "t.time = c.time and t.latitude = c.latitude and t.longitude = c.longitude"
+    silver_merge_condition = (" and ").join(
+        [f"t.{column} = c.{column}"
+        for column in silver_merge_keys]
+    )
+    print("Merge condition:", silver_merge_condition)
+
+    # Run the function in the dev workspace
+    era5_changeset = bronze_to_silver_era5_country_approximate_autoloader(
+        bronze_era5_table,
+        country_index_table,
+        lat_col,
+        lon_col,
+        target_resolution=target_resolution,
+        join_type="left"
+    )
+
+    ## schema of the silver table ## create it if it doesn't exist
+    spark.sql(f"""
+        CREATE TABLE IF NOT EXISTS {target_silver_table} (
+            time TIMESTAMP,
+            latitude FLOAT,
+            longitude FLOAT,
+            mean_t2m_c FLOAT,
+            max_t2m_c FLOAT,
+            min_t2m_c FLOAT,
+            sum_tp_mm FLOAT,
+            file_modified_in_s3 TIMESTAMP,
+            source_file STRING,
+            Source_File_Path STRING,
+            Ingest_Timestamp TIMESTAMP,
+            data_provider STRING,
+            grid_index BIGINT,
+            country STRING,
+            {sequence_col} timestamp)
+        USING delta
+        CLUSTER BY ({",".join(silver_merge_keys)})
+    """)
+
+    # Write the stream into the table with merge and schema evolution
+    write_stream = (
+        era5_changeset
+        .writeStream
+        .format("delta")
+        .option("mergeSchema", "true")  # Enable schema evolution
+        .option("checkpointLocation", checkpoint)
+        .foreachBatch(lambda batch_df, batch_id: (
+            DeltaTable.forName(spark, target_silver_table)
+            .alias("t")
+            .merge(
+                batch_df.alias("c"),
+                silver_merge_condition
+            )
+            .whenMatchedUpdateAll()
+            .whenNotMatchedInsertAll()
+            .execute()
+        ))
+        .trigger(availableNow=True)
+        .start()
+    )
+
+    write_stream.awaitTermination()  # Keeps later cells from running until the stream is done
+
+    print("Function executed in the staging workspace on the entire data.") 
+
+
 else:
-    # Do not run the function if not in the dev workspace
+    # Do not run the function if not in the dev or staging workspace
     print("This function is not executed in this workspace.")
 

@@ -37,6 +37,9 @@ workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.wo
 # Dev workspace URL
 dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
 
+# Staging workspace URL
+staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
+
 # Conditional logic to set the catalog, schema, and table based on the workspace URL
 if workspace_url == dev_workspace_url:
     # If in the dev workspace, set the catalog, schema, and table names
@@ -76,7 +79,49 @@ if workspace_url == dev_workspace_url:
         missing_dates.write.format("delta").mode("overwrite").saveAsTable(missing_dates_table)
     else:
         print("There are no missing dates in this range.")
+
+elif workspace_url == staging_workspace_url:
+
+    # If in the staging workspace, set the catalog, schema, and table names
+    catalog = '`era5-daily-data`'
+    schema = 'bronze_staging'
+    table = 'aer_era5_bronze_1950_to_present_staging_interpolation'
+    
+    # Construct the full table name
+    full_table_name = f"{catalog}.{schema}.{table}"
+    
+    # Load the table
+    df = SparkSession.builder.getOrCreate().table(full_table_name)
+    
+    # Get the earliest and latest dates
+    date_range = df.selectExpr("min(time) as start_date", "max(time) as end_date").collect()[0]
+    start_date = date_range['start_date']
+    end_date = date_range['end_date']
+    
+    # Create a DataFrame with the full range of dates using INTERVAL 1 DAY
+    full_dates = SparkSession.builder.getOrCreate().createDataFrame(
+        [(start_date, end_date)],
+        ["start_date", "end_date"]
+    ).select(explode(sequence(col("start_date"), col("end_date"), expr("INTERVAL 1 DAY"))).alias("date"))
+
+    # Join with the original DataFrame to find missing dates
+    missing_dates = full_dates.join(df, full_dates["date"] == df["time"], "leftanti")
+    
+    # Check if there are any missing dates and display them or save them
+    if missing_dates.count() > 0:
+        print("Missing dates:")
+        missing_dates.show()
+
+        # Define the Delta table name for storing missing dates
+        missing_dates_table = f"{catalog}.{schema}.missing_dates"
+    
+        # Save the missing dates as a Delta table
+        missing_dates.write.format("delta").mode("overwrite").saveAsTable(missing_dates_table)
+    else:
+        print("There are no missing dates in this range.")
+
+
 else:
-    # Do not run the function if not in the dev workspace
+    # Do not run the function if not in the dev or staging workspace
     print("This check is not executed in this workspace.")
 

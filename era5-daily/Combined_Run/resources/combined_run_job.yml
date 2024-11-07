@@ -7,11 +7,23 @@ targets:
     run_as:
       - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
     presets:
-      trigger_pause_status: PAUSED ## we can define a schedule for deployment ## PAUSED means schedule is paused
+      trigger_pause_status: PAUSED  # Define a schedule for deployment. PAUSED means schedule is paused.
       jobs_max_concurrent_runs: 10
       tags:
         environment: development
         team: data-engineering
+
+  staging:
+    mode: staging
+    run_as:
+      - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"  
+    presets:
+      trigger_pause_status: PAUSED  # Set to ACTIVE to enable scheduling
+      jobs_max_concurrent_runs: 20  # Set a different limit for production if needed
+      tags:
+        environment: staging
+        team: data-engineering
+
 
 resources:
   jobs:

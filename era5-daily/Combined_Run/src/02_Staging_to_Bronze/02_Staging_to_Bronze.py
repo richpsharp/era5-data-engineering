@@ -86,6 +86,26 @@ workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.wo
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC **Dev workspace URL**
+
+# COMMAND ----------
+
+# Dev workspace URL
+dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC **Staging workspace URL**
+
+# COMMAND ----------
+
+# Staging workspace URL
+staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ### Conditional Data Processing Based on Workspace
 # MAGIC
 # MAGIC This section contains logic that checks the workspace URL to determine if the script is running in the development environment (`dev_workspace_url`). If it is, the script processes a small subset of data and moves it from the staging area to the bronze Delta table using Databricks' autoloader. If not, the script exits without executing.
@@ -107,8 +127,7 @@ workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.wo
 
 # COMMAND ----------
 
-# Dev workspace URL
-dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
+
 
 # Conditional logic to set the target_folder based on the workspace URL
 if workspace_url == dev_workspace_url:
@@ -144,6 +163,42 @@ if workspace_url == dev_workspace_url:
     )
 
     print("Function executed in the dev workspace on a small subset of the data.") 
+
+elif workspace_url == staging_workspace_url:
+
+    # If in the staging workspace, run on the entire dataset
+    source_file_location = '/Volumes/era5-daily-data/bronze_staging/era5_gwsc_staging_folder'
+    checkpoint_location = '/Volumes/era5-daily-data/bronze_staging/checkpoints/source_to_bronze_era5'
+    reference_ds_path = '/Volumes/cmip6-daily-data/gwsc-cmip6-daily/nex-gddp-cmip6/ACCESS-ESM1-5/ssp245/pr/pr_day_ACCESS-ESM1-5_ssp245_r1i1p1f1_gn_2040_v1.1.nc'
+    streaming_query_name = 'Load ERA5 Files'
+    data_format = 'delta'
+    table_name = 'aer_era5_bronze_1950_to_present_staging_interpolation'
+    schema_name = 'bronze_staging'
+    catalog_name = '`era5-daily-data`'
+    write_mode = 'append'
+    data_provider = 'Atmospheric and Environmental Research (AER)'
+    date_created_attr = 'date_updated'
+
+    # Run your function with the small subset of data 
+    netcdf_to_bronze_autoloader(
+        spark,
+        source_file_location=source_file_location,
+        output_schema=output_schema,
+        checkpoint_location=checkpoint_location,
+        streaming_query_name=streaming_query_name,
+        data_format=data_format,
+        table_name=table_name,
+        schema_name=schema_name,
+        catalog_name=catalog_name,
+        write_mode=write_mode,
+        data_provider=data_provider,
+        date_created_attr=date_created_attr,
+        reference_ds_path=reference_ds_path
+    )
+
+    print("Function executed in the staging workspace on the entire data.") 
+
+
 
 else:
     # Do not run the function if not in the dev workspace

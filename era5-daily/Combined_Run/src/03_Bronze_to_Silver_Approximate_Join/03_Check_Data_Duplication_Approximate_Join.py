@@ -40,7 +40,10 @@ from pyspark.sql.functions import count, col
 workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.workspaceUrl", None)
 
 # Dev workspace URL
-dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
+dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com" 
+
+# Staging workspace URL
+staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
 
 # Conditional logic to set the catalog, schema, and table based on the workspace URL
 if workspace_url == dev_workspace_url:
@@ -89,5 +92,60 @@ if workspace_url == dev_workspace_url:
         
         # Save each variable's duplicates to a separate Delta table
         df_variable_duplicates.write.format("delta").mode("overwrite") \
-            .saveAsTable(f"{catalog}.{schema}.approximate_join_duplicates_{var}")
+            .saveAsTable(f"{catalog}.{schema}.approximate_join_duplicates_{var}") 
+
+elif workspace_url == staging_workspace_url:
+
+    # If in the staging workspace, set the catalog, schema, and table names
+    catalog = '`era5-daily-data`'
+    schema = 'silver_staging'
+    table = 'aer_era5_silver_approximate_1950_to_present_staging_interpolation'
+    
+    # Construct the full table name
+    full_table_name = f"{catalog}.{schema}.{table}"
+    
+    # Load the table
+    df = SparkSession.builder.getOrCreate().table(full_table_name)
+
+    
+    ### Identify duplicates based on latitude, longitude and grid index combinations within the same time 
+    df_grid_index_lat_lon_duplicates = df.groupBy('grid_index', 'latitude', 'longitude', 'time') \
+        .agg(count("*").alias("count")) \
+        .filter(col("count") > 1) 
+
+    ### 
+    # Join back with the original DataFrame to get all columns
+    df_grid_index_lat_lon_duplicates = df_grid_index_lat_lon_duplicates.join(df, on=['grid_index', 'latitude', 'longitude', 'time'], how='inner') \
+        .select("time", "latitude", "longitude", "count", "file_modified_in_s3", "source_file", 
+                "Source_File_Path", "Ingest_Timestamp", "data_provider", "date_created","grid_index","country")
+
+    # Save this to a Delta table
+    df_grid_index_lat_lon_duplicates.write.format("delta").mode("overwrite") \
+        .saveAsTable(f"{catalog}.{schema}.approximate_join_time_lat_lon_grid_index_duplicates_with_details")
+
+
+
+    # Identify the duplicates for each of the variables within the same time step
+    variables = ["mean_t2m_c", "max_t2m_c", "min_t2m_c", "sum_tp_mm"]
+
+    for var in variables:
+        df_variable_duplicates = df.groupBy('latitude', 'longitude', 'time', var) \
+            .agg(count("*").alias("count")) \
+            .filter(col("count") > 1)
+
+        # Join back with the original DataFrame to get all columns
+        df_variable_duplicates = df_variable_duplicates.join(df, on=['latitude', 'longitude', 'time', var], how='inner') \
+            .select("time", "latitude", "longitude", var, "count", "file_modified_in_s3", 
+                    "source_file", "Source_File_Path", "Ingest_Timestamp", 
+                    "data_provider", "date_created","grid_index","country")
+        
+        # Save each variable's duplicates to a separate Delta table
+        df_variable_duplicates.write.format("delta").mode("overwrite") \
+            .saveAsTable(f"{catalog}.{schema}.approximate_join_duplicates_{var}") 
+
+else:
+    # Do not run the function if not in the dev or staging workspace
+    print("This function is not executed in this workspace.")
+
+
 

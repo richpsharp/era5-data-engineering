@@ -74,6 +74,16 @@ dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC **The staging workspace URL**
+
+# COMMAND ----------
+
+# Staging workspace URL
+staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ### Conditional Logic and Spatial Dimension Check
 # MAGIC
 # MAGIC This section sets up conditional logic to ensure the function is only executed in the development workspace. It checks NetCDF files in a specific directory to verify that they have the correct spatial dimensions.
@@ -109,6 +119,22 @@ if workspace_url == dev_workspace_url:
                        expected_lat=expected_lat)
 
     print("Function executed in the dev workspace on a small subset of the data.") 
+
+elif workspace_url == staging_workspace_url:
+
+    # If in the dev workspace, run on a small subset of the data
+    directory = '/Volumes/era5-daily-data/bronze_staging/era5_gwsc_staging_folder'
+    expected_lon = 1440
+    expected_lat = 721
+
+    # Run your function with the small subset of data 
+    check_netcdf_files(directory = directory,
+                       expected_lon=expected_lon, 
+                       expected_lat=expected_lat)
+
+    print("Function executed in the staging workspace on the whole data.") 
+
+
 
 else:
     # Do not run the function if not in the dev workspace
