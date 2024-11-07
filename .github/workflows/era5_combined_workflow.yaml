@@ -1,3 +1,5 @@
+
+
 ## Combined ERA5 Workflow
 
 name: "Combined ERA5 Workflow"
@@ -12,7 +14,7 @@ on:
       - staging
 
 jobs:
-  # Job 1: era5_source_to_staging_job
+  # Job 1: deploy_era5_source_to_staging_job
   deploy_era5_source_to_staging:
     name: "Deploy era5_source_to_staging_job"
     runs-on: ubuntu-latest
@@ -20,17 +22,35 @@ jobs:
     steps:
       # Check out this repo, so that this workflow can access it.
       - uses: actions/checkout@v3
+      
       # Download the Databricks CLI.
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
-      
+
+      - name: Set Databricks Secrets
+        id: set_secrets
+        run: |
+          if [[ "${{ github.event.pull_request.base.ref }}" == "dev-main" ]]; then
+            echo "Using development secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
+            echo "Using staging secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "Unknown base branch"
+            exit 1
+          fi
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_HOST_DEVELOPMENT' || 'DATABRICKS_HOST_STAGING'] }}
-          DATABRICKS_CLIENT_ID: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_ID_DEVELOPMENT' || 'DATABRICKS_CLIENT_ID_DEVELOPMENT'] }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT' || 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT'] }}
+          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ env.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ env.DATABRICKS_CLIENT_SECRET }}
 
   run_era5_source_to_staging:
     name: "Run era5_source_to_staging_job"
@@ -43,35 +63,70 @@ jobs:
       # Download the Databricks CLI.
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
-      
+
+      - name: Set Databricks Secrets
+        id: set_secrets
+        run: |
+          if [[ "${{ github.event.pull_request.base.ref }}" == "dev-main" ]]; then
+            echo "Using development secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
+            echo "Using staging secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "Unknown base branch"
+            exit 1
+          fi
 
       - run: databricks bundle run era5_source_to_staging_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_HOST_DEVELOPMENT' || 'DATABRICKS_HOST_STAGING'] }}
-          DATABRICKS_CLIENT_ID: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_ID_DEVELOPMENT' || 'DATABRICKS_CLIENT_ID_DEVELOPMENT'] }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT' || 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT'] }}
+          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ env.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ env.DATABRICKS_CLIENT_SECRET }}
 
   # Job 2: era5_source_to_bronze_country_boundaries_job
   deploy_era5_source_to_bronze_country_boundaries:
     name: "Deploy era5_source_to_bronze_country_boundaries_job"
     runs-on: ubuntu-latest
     needs:
-      - run_era5_source_to_staging
-
+      - run_era5_source_to_staging 
+      
     steps:
       - uses: actions/checkout@v3
       # Download the Databricks CLI.
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
+      - name: Set Databricks Secrets
+        id: set_secrets
+        run: |
+          if [[ "${{ github.event.pull_request.base.ref }}" == "dev-main" ]]; then
+            echo "Using development secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
+            echo "Using staging secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "Unknown base branch"
+            exit 1
+          fi
+
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_HOST_DEVELOPMENT' || 'DATABRICKS_HOST_STAGING'] }}
-          DATABRICKS_CLIENT_ID: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_ID_DEVELOPMENT' || 'DATABRICKS_CLIENT_ID_DEVELOPMENT'] }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT' || 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT'] }}
-
+          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ env.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ env.DATABRICKS_CLIENT_SECRET }}
+          
   run_era5_source_to_bronze_country_boundaries:
     name: "Run era5_source_to_bronze_country_boundaries_job"
     runs-on: ubuntu-latest
@@ -84,12 +139,30 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle run era5_source_to_bronze_country_boundaries_job --refresh-all
+      - name: Set Databricks Secrets
+        id: set_secrets
+        run: |
+          if [[ "${{ github.event.pull_request.base.ref }}" == "dev-main" ]]; then
+            echo "Using development secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
+            echo "Using staging secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "Unknown base branch"
+            exit 1
+          fi
+
+      - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_HOST_DEVELOPMENT' || 'DATABRICKS_HOST_STAGING'] }}
-          DATABRICKS_CLIENT_ID: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_ID_DEVELOPMENT' || 'DATABRICKS_CLIENT_ID_DEVELOPMENT'] }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT' || 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT'] }}
+          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ env.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ env.DATABRICKS_CLIENT_SECRET }}
 
   # Job 3: era5_staging_to_bronze_interpolation_job
   deploy_era5_staging_to_bronze_interpolation:
@@ -104,13 +177,31 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
+      - name: Set Databricks Secrets
+        id: set_secrets
+        run: |
+          if [[ "${{ github.event.pull_request.base.ref }}" == "dev-main" ]]; then
+            echo "Using development secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
+            echo "Using staging secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "Unknown base branch"
+            exit 1
+          fi
+
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_HOST_DEVELOPMENT' || 'DATABRICKS_HOST_STAGING'] }}
-          DATABRICKS_CLIENT_ID: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_ID_DEVELOPMENT' || 'DATABRICKS_CLIENT_ID_DEVELOPMENT'] }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT' || 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT'] }}
-
+          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ env.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ env.DATABRICKS_CLIENT_SECRET }}
+          
   run_era5_staging_to_bronze_interpolation:
     name: "Run era5_staging_to_bronze_interpolation_job"
     runs-on: ubuntu-latest
@@ -123,13 +214,32 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle run era5_staging_to_bronze_interpolation_job --refresh-all
+      - name: Set Databricks Secrets
+        id: set_secrets
+        run: |
+          if [[ "${{ github.event.pull_request.base.ref }}" == "dev-main" ]]; then
+            echo "Using development secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
+            echo "Using staging secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "Unknown base branch"
+            exit 1
+          fi
+
+      - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_HOST_DEVELOPMENT' || 'DATABRICKS_HOST_STAGING'] }}
-          DATABRICKS_CLIENT_ID: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_ID_DEVELOPMENT' || 'DATABRICKS_CLIENT_ID_DEVELOPMENT'] }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT' || 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT'] }}
+          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ env.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ env.DATABRICKS_CLIENT_SECRET }}
 
+     
   # Job 4: era5_bronze_to_silver_country_indices_job
   deploy_era5_bronze_to_silver_country_indices:
     name: "Deploy era5_bronze_to_silver_country_indices_job"
@@ -143,13 +253,31 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
+      - name: Set Databricks Secrets
+        id: set_secrets
+        run: |
+          if [[ "${{ github.event.pull_request.base.ref }}" == "dev-main" ]]; then
+            echo "Using development secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
+            echo "Using staging secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "Unknown base branch"
+            exit 1
+          fi
+
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_HOST_DEVELOPMENT' || 'DATABRICKS_HOST_STAGING'] }}
-          DATABRICKS_CLIENT_ID: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_ID_DEVELOPMENT' || 'DATABRICKS_CLIENT_ID_DEVELOPMENT'] }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT' || 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT'] }}
-
+          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ env.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ env.DATABRICKS_CLIENT_SECRET }}
+          
   run_era5_bronze_to_silver_country_indices:
     name: "Run era5_bronze_to_silver_country_indices_job"
     runs-on: ubuntu-latest
@@ -162,13 +290,31 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle run era5_bronze_to_silver_country_indices_job --refresh-all
+      - name: Set Databricks Secrets
+        id: set_secrets
+        run: |
+          if [[ "${{ github.event.pull_request.base.ref }}" == "dev-main" ]]; then
+            echo "Using development secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
+            echo "Using staging secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "Unknown base branch"
+            exit 1
+          fi
+
+      - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_HOST_DEVELOPMENT' || 'DATABRICKS_HOST_STAGING'] }}
-          DATABRICKS_CLIENT_ID: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_ID_DEVELOPMENT' || 'DATABRICKS_CLIENT_ID_DEVELOPMENT'] }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT' || 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT'] }}
-
+          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ env.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ env.DATABRICKS_CLIENT_SECRET }}
+          
   # Job 5: era5_bronze_to_silver_approximate_join_job
   deploy_era5_bronze_to_silver_approximate_join:
     name: "Deploy era5_bronze_to_silver_approximate_join_job"
@@ -180,14 +326,32 @@ jobs:
       - uses: actions/checkout@v3
       # Download the Databricks CLI.
       # See https://github.com/databricks/setup-cli
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@main 
+
+      - name: Set Databricks Secrets
+        id: set_secrets
+        run: |
+          if [[ "${{ github.event.pull_request.base.ref }}" == "dev-main" ]]; then
+            echo "Using development secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
+            echo "Using staging secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "Unknown base branch"
+            exit 1
+          fi
 
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_HOST_DEVELOPMENT' || 'DATABRICKS_HOST_STAGING'] }}
-          DATABRICKS_CLIENT_ID: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_ID_DEVELOPMENT' || 'DATABRICKS_CLIENT_ID_DEVELOPMENT'] }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT' || 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT'] }}
+          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ env.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ env.DATABRICKS_CLIENT_SECRET }}
 
   run_era5_bronze_to_silver_approximate_join:
     name: "Run era5_bronze_to_silver_approximate_join_job"
@@ -201,13 +365,31 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle run era5_bronze_to_silver_approximate_join_job --refresh-all
+      - name: Set Databricks Secrets
+        id: set_secrets
+        run: |
+          if [[ "${{ github.event.pull_request.base.ref }}" == "dev-main" ]]; then
+            echo "Using development secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
+            echo "Using staging secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "Unknown base branch"
+            exit 1
+          fi
+
+      - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_HOST_DEVELOPMENT' || 'DATABRICKS_HOST_STAGING'] }}
-          DATABRICKS_CLIENT_ID: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_ID_DEVELOPMENT' || 'DATABRICKS_CLIENT_ID_DEVELOPMENT'] }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT' || 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT'] }}
-
+          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ env.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ env.DATABRICKS_CLIENT_SECRET }}
+          
   # Job 6: era5_bronze_to_silver_strict_join_job
   deploy_era5_bronze_to_silver_strict_join:
     name: "Deploy era5_bronze_to_silver_strict_join_job"
@@ -221,13 +403,31 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
+      - name: Set Databricks Secrets
+        id: set_secrets
+        run: |
+          if [[ "${{ github.event.pull_request.base.ref }}" == "dev-main" ]]; then
+            echo "Using development secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
+            echo "Using staging secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "Unknown base branch"
+            exit 1
+          fi
+
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_HOST_DEVELOPMENT' || 'DATABRICKS_HOST_STAGING'] }}
-          DATABRICKS_CLIENT_ID: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_ID_DEVELOPMENT' || 'DATABRICKS_CLIENT_ID_DEVELOPMENT'] }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT' || 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT'] }}
-
+          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ env.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ env.DATABRICKS_CLIENT_SECRET }}
+          
   run_era5_bronze_to_silver_strict_join:
     name: "Run era5_bronze_to_silver_strict_join_job"
     runs-on: ubuntu-latest
@@ -240,11 +440,28 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle run era5_bronze_to_silver_strict_join_job --refresh-all
+      - name: Set Databricks Secrets
+        id: set_secrets
+        run: |
+          if [[ "${{ github.event.pull_request.base.ref }}" == "dev-main" ]]; then
+            echo "Using development secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
+            echo "Using staging secrets"
+            echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_ID=${{ secrets.DATABRICKS_CLIENT_ID_STAGING }}" >> $GITHUB_ENV
+            echo "DATABRICKS_CLIENT_SECRET=${{ secrets.DATABRICKS_CLIENT_SECRET_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "Unknown base branch"
+            exit 1
+          fi
+
+      - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_HOST_DEVELOPMENT' || 'DATABRICKS_HOST_STAGING'] }}
-          DATABRICKS_CLIENT_ID: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_ID_DEVELOPMENT' || 'DATABRICKS_CLIENT_ID_DEVELOPMENT'] }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets[github.event.pull_request.base.ref == 'dev-main' && 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT' || 'DATABRICKS_CLIENT_SECRET_DEVELOPMENT'] }}
-
+          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ env.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ env.DATABRICKS_CLIENT_SECRET }}
          
