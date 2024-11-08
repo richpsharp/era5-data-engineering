@@ -9,7 +9,6 @@ on:
       - synchronize
     branches:
       - dev-main
-      - staging
 
 jobs:
   # Job 1: era5_source_to_staging_job
@@ -28,10 +27,9 @@ jobs:
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_HOST_STAGING || secrets.DATABRICKS_HOST_DEVELOPMENT }}
-      DATABRICKS_CLIENT_ID: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_ID_STAGING || secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-      DATABRICKS_CLIENT_SECRET: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_SECRET_STAGING || secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
-          
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
 
   run_era5_source_to_staging:
     name: "Run era5_source_to_staging_job"
@@ -49,9 +47,9 @@ jobs:
       - run: databricks bundle run era5_source_to_staging_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_HOST_STAGING || secrets.DATABRICKS_HOST_DEVELOPMENT }}
-      DATABRICKS_CLIENT_ID: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_ID_STAGING || secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-      DATABRICKS_CLIENT_SECRET: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_SECRET_STAGING || secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
 
   # Job 2: era5_source_to_bronze_country_boundaries_job
   deploy_era5_source_to_bronze_country_boundaries:
@@ -69,9 +67,9 @@ jobs:
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_HOST_STAGING || secrets.DATABRICKS_HOST_DEVELOPMENT }}
-      DATABRICKS_CLIENT_ID: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_ID_STAGING || secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-      DATABRICKS_CLIENT_SECRET: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_SECRET_STAGING || secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
 
   run_era5_source_to_bronze_country_boundaries:
     name: "Run era5_source_to_bronze_country_boundaries_job"
@@ -88,9 +86,9 @@ jobs:
       - run: databricks bundle run era5_source_to_bronze_country_boundaries_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_HOST_STAGING || secrets.DATABRICKS_HOST_DEVELOPMENT }}
-      DATABRICKS_CLIENT_ID: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_ID_STAGING || secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-      DATABRICKS_CLIENT_SECRET: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_SECRET_STAGING || secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
 
   # Job 3: era5_staging_to_bronze_interpolation_job
   deploy_era5_staging_to_bronze_interpolation:
@@ -108,9 +106,9 @@ jobs:
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_HOST_STAGING || secrets.DATABRICKS_HOST_DEVELOPMENT }}
-      DATABRICKS_CLIENT_ID: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_ID_STAGING || secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-      DATABRICKS_CLIENT_SECRET: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_SECRET_STAGING || secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
 
   run_era5_staging_to_bronze_interpolation:
     name: "Run era5_staging_to_bronze_interpolation_job"
@@ -127,9 +125,9 @@ jobs:
       - run: databricks bundle run era5_staging_to_bronze_interpolation_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_HOST_STAGING || secrets.DATABRICKS_HOST_DEVELOPMENT }}
-      DATABRICKS_CLIENT_ID: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_ID_STAGING || secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-      DATABRICKS_CLIENT_SECRET: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_SECRET_STAGING || secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
 
   # Job 4: era5_bronze_to_silver_country_indices_job
   deploy_era5_bronze_to_silver_country_indices:
@@ -147,9 +145,9 @@ jobs:
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_HOST_STAGING || secrets.DATABRICKS_HOST_DEVELOPMENT }}
-      DATABRICKS_CLIENT_ID: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_ID_STAGING || secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-      DATABRICKS_CLIENT_SECRET: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_SECRET_STAGING || secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
 
   run_era5_bronze_to_silver_country_indices:
     name: "Run era5_bronze_to_silver_country_indices_job"
@@ -166,9 +164,9 @@ jobs:
       - run: databricks bundle run era5_bronze_to_silver_country_indices_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_HOST_STAGING || secrets.DATABRICKS_HOST_DEVELOPMENT }}
-      DATABRICKS_CLIENT_ID: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_ID_STAGING || secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-      DATABRICKS_CLIENT_SECRET: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_SECRET_STAGING || secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
 
   # Job 5: era5_bronze_to_silver_approximate_join_job
   deploy_era5_bronze_to_silver_approximate_join:
@@ -186,9 +184,9 @@ jobs:
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_HOST_STAGING || secrets.DATABRICKS_HOST_DEVELOPMENT }}
-      DATABRICKS_CLIENT_ID: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_ID_STAGING || secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-      DATABRICKS_CLIENT_SECRET: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_SECRET_STAGING || secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
 
   run_era5_bronze_to_silver_approximate_join:
     name: "Run era5_bronze_to_silver_approximate_join_job"
@@ -205,9 +203,9 @@ jobs:
       - run: databricks bundle run era5_bronze_to_silver_approximate_join_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_HOST_STAGING || secrets.DATABRICKS_HOST_DEVELOPMENT }}
-      DATABRICKS_CLIENT_ID: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_ID_STAGING || secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-      DATABRICKS_CLIENT_SECRET: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_SECRET_STAGING || secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
 
   # Job 6: era5_bronze_to_silver_strict_join_job
   deploy_era5_bronze_to_silver_strict_join:
@@ -225,9 +223,9 @@ jobs:
       - run: databricks bundle deploy
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_HOST_STAGING || secrets.DATABRICKS_HOST_DEVELOPMENT }}
-      DATABRICKS_CLIENT_ID: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_ID_STAGING || secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-      DATABRICKS_CLIENT_SECRET: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_SECRET_STAGING || secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
 
   run_era5_bronze_to_silver_strict_join:
     name: "Run era5_bronze_to_silver_strict_join_job"
@@ -244,6 +242,6 @@ jobs:
       - run: databricks bundle run era5_bronze_to_silver_strict_join_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
-          DATABRICKS_HOST: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_HOST_STAGING || secrets.DATABRICKS_HOST_DEVELOPMENT }}
-      DATABRICKS_CLIENT_ID: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_ID_STAGING || secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-      DATABRICKS_CLIENT_SECRET: ${{ github.base_ref == 'staging' && secrets.DATABRICKS_CLIENT_SECRET_STAGING || secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
