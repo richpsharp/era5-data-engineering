@@ -122,11 +122,34 @@ import os
 
 # COMMAND ----------
 
-catalog_name = "era5-daily-data"
-schema_name = "bronze_staging"
-spark.catalog.setCurrentCatalog(catalog_name)
-spark.catalog.setCurrentDatabase(schema_name)
-# display(sql("show tables"))
+from pyspark.sql import SparkSession
+
+
+
+# Get the current workspace URL
+workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.workspaceUrl", None)
+
+# Dev workspace URL
+dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
+
+# Staging workspace URL
+staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
+
+# COMMAND ----------
+
+if workspace_url == dev_workspace_url:
+  catalog_name = "era5-daily-data"
+  schema_name = "bronze_dev"
+  spark.catalog.setCurrentCatalog(catalog_name)
+  spark.catalog.setCurrentDatabase(schema_name)
+  # display(sql("show tables"))
+elif workspace_url == staging_workspace_url:
+  catalog_name = "era5-daily-data"
+  schema_name = "bronze_staging"
+  spark.catalog.setCurrentCatalog(catalog_name)
+  spark.catalog.setCurrentDatabase(schema_name)
+else: 
+  print("code is not designed to work in this workspace")
 
 # COMMAND ----------
 

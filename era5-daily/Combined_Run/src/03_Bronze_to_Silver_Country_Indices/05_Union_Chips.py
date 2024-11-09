@@ -98,13 +98,43 @@ from pyspark.databricks.sql.functions import h3_boundaryaswkb
 
 # COMMAND ----------
 
-catalog_name = "`era5-daily-data`"
-bronze_schema_name = "bronze_dev"
-silver_schema_name = "silver_dev"
+from pyspark.sql import SparkSession
 
-tessellated_table = f"{catalog_name}.{bronze_schema_name}.countries_h3"
-chip_table = f"{catalog_name}.{silver_schema_name}.esri_worldcountryboundaries_global_silver_chips"
-final_countries_table = f"{catalog_name}.{silver_schema_name}.esri_worldcountryboundaries_global_silver"
+
+
+# Get the current workspace URL
+workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.workspaceUrl", None)
+
+# Dev workspace URL
+dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
+
+# Staging workspace URL
+staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
+
+# COMMAND ----------
+
+if workspace_url == dev_workspace_url:
+  catalog_name = "`era5-daily-data`"
+  bronze_schema_name = "bronze_dev"
+  silver_schema_name = "silver_dev"
+
+  tessellated_table = f"{catalog_name}.{bronze_schema_name}.countries_h3"
+  chip_table = f"{catalog_name}.{silver_schema_name}.esri_worldcountryboundaries_global_silver_chips"
+  final_countries_table = f"{catalog_name}.{silver_schema_name}.esri_worldcountryboundaries_global_silver" 
+
+elif workspace_url == staging_workspace_url:
+  catalog_name = "`era5-daily-data`"
+  bronze_schema_name = "bronze_staging"
+  silver_schema_name = "silver_staging"
+
+  tessellated_table = f"{catalog_name}.{bronze_schema_name}.countries_h3"
+  chip_table = f"{catalog_name}.{silver_schema_name}.esri_worldcountryboundaries_global_silver_chips"
+  final_countries_table = f"{catalog_name}.{silver_schema_name}.esri_worldcountryboundaries_global_silver"  
+
+else:
+  print("This code is not designed to run in the dev and staging workspace")
+
+
 
 # COMMAND ----------
 
