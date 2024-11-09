@@ -14,7 +14,7 @@ targets:
         team: data-engineering
 
   staging:
-    mode: staging
+    mode: production
     run_as:
       - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"  
     presets:
