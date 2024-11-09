@@ -24,7 +24,7 @@ jobs:
       - uses: databricks/setup-cli@main
       
 
-      - run: databricks bundle deploy
+      - run: databricks bundle deploy -t staging
         working-directory: ./era5-daily/Combined_Run
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
@@ -44,7 +44,7 @@ jobs:
       - uses: databricks/setup-cli@main
       
 
-      - run: databricks bundle run era5_source_to_staging_job --refresh-all
+      - run: databricks bundle run -t staging era5_source_to_staging_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
@@ -64,7 +64,7 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle deploy
+      - run: databricks bundle deploy -t staging
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
@@ -83,7 +83,7 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle run era5_source_to_bronze_country_boundaries_job --refresh-all
+      - run: databricks bundle deploy -t staging era5_source_to_bronze_country_boundaries_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
@@ -103,7 +103,7 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle deploy
+      - run: databricks bundle deploy -t staging
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
@@ -122,7 +122,7 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle run era5_staging_to_bronze_interpolation_job --refresh-all
+      - run: databricks bundle run -t staging era5_staging_to_bronze_interpolation_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
@@ -142,7 +142,7 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle deploy
+      - run: databricks bundle deploy -t staging
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
@@ -161,7 +161,7 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle run era5_bronze_to_silver_country_indices_job --refresh-all
+      - run: databricks bundle run -t staging era5_bronze_to_silver_country_indices_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
@@ -181,7 +181,7 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle deploy
+      - run: databricks bundle deploy -t staging
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
@@ -200,7 +200,7 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle run era5_bronze_to_silver_approximate_join_job --refresh-all
+      - run: databricks bundle run -t staging era5_bronze_to_silver_approximate_join_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
@@ -220,7 +220,7 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle deploy
+      - run: databricks bundle deploy -t staging
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
@@ -239,7 +239,7 @@ jobs:
       # See https://github.com/databricks/setup-cli
       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle run era5_bronze_to_silver_strict_join_job --refresh-all
+      - run: databricks bundle run -t staging era5_bronze_to_silver_strict_join_job --refresh-all
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
