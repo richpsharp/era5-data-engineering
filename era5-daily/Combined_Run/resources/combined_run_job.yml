@@ -199,12 +199,26 @@ resources:
           notebook_task:
             notebook_path: ../src/03_Bronze_to_Silver_Country_Indices/01_Ingest_Countries.py 
 
+        - task_key: ingest_countries_res4
+          depends_on:
+            - task_key: unit_tests_task_2
+          job_cluster_key: era5_country_indices  
+          notebook_task:
+            notebook_path: ../src/03_Bronze_to_Silver_Country_Indices_res4/01_Ingest_Countries.py
+
         - task_key: validate_countries
           depends_on:
             - task_key: ingest_countries
           job_cluster_key: era5_country_indices  
           notebook_task:
             notebook_path: ../src/03_Bronze_to_Silver_Country_Indices/02_Validate_Countries.py
+
+        - task_key: validate_countries_res4
+          depends_on:
+            - task_key: ingest_countries_res4
+          job_cluster_key: era5_country_indices  
+          notebook_task:
+            notebook_path: ../src/03_Bronze_to_Silver_Country_Indices_res4/02_Validate_Countries.py
 
         - task_key: tessellate_countries
           depends_on:
@@ -213,6 +227,13 @@ resources:
           notebook_task:
             notebook_path: ../src/03_Bronze_to_Silver_Country_Indices/03_Tessellate_Countries.py 
 
+        - task_key: tessellate_countries_res4
+          depends_on:
+            - task_key: validate_countries_res4
+          job_cluster_key: era5_country_indices  
+          notebook_task:
+            notebook_path: ../src/03_Bronze_to_Silver_Country_Indices_res4/03_Tessellate_Countries.py 
+
         - task_key: viz_countries
           depends_on:
             - task_key: tessellate_countries
@@ -220,12 +241,26 @@ resources:
           notebook_task:
             notebook_path: ../src/03_Bronze_to_Silver_Country_Indices/04_Viz_Countries.py 
 
+        - task_key: viz_countries_res4
+          depends_on:
+            - task_key: tessellate_countries_res4
+          job_cluster_key: era5_country_indices  
+          notebook_task:
+            notebook_path: ../src/03_Bronze_to_Silver_Country_Indices_res4/04_Viz_Countries.py 
+
         - task_key: union_chips
           depends_on:
             - task_key: viz_countries
           job_cluster_key: era5_country_indices  
           notebook_task:
-            notebook_path: ../src/03_Bronze_to_Silver_Country_Indices/05_Union_Chips.py
+            notebook_path: ../src/03_Bronze_to_Silver_Country_Indices/05_Union_Chips.py 
+
+        - task_key: union_chips_res4
+          depends_on:
+            - task_key: viz_countries_res4
+          job_cluster_key: era5_country_indices  
+          notebook_task:
+            notebook_path: ../src/03_Bronze_to_Silver_Country_Indices_res4/05_Union_Chips.py
 
       job_clusters:
         - job_cluster_key: era5_country_indices
@@ -267,14 +302,28 @@ resources:
             - task_key: unit_tests_task
           job_cluster_key: era5_approximate_join  # job cluster key
           notebook_task:
-            notebook_path: ../src/03_Bronze_to_Silver_Approximate_Join/03_Bronze_to_Silver_era5_country_approximate_join_autoloader.py
+            notebook_path: ../src/03_Bronze_to_Silver_Approximate_Join/03_Bronze_to_Silver_era5_country_approximate_join_autoloader.py 
+
+        - task_key: run_on_sample_task_res4
+          depends_on:
+            - task_key: unit_tests_task
+          job_cluster_key: era5_approximate_join  # job cluster key
+          notebook_task:
+            notebook_path: ../src/03_Bronze_to_Silver_Approximate_Join_res4/03_Bronze_to_Silver_era5_country_approximate_join_autoloader.py
 
         - task_key: data_duplication_check_task
           depends_on:
             - task_key: run_on_sample_task  # Depends on the run on sample task 
           job_cluster_key: era5_approximate_join  # Updated job cluster key
           notebook_task:
-            notebook_path: ../src/03_Bronze_to_Silver_Approximate_Join/03_Check_Data_Duplication_Approximate_Join.py  # Path to notebook
+            notebook_path: ../src/03_Bronze_to_Silver_Approximate_Join/03_Check_Data_Duplication_Approximate_Join.py  
+
+        - task_key: data_duplication_check_task_res4
+          depends_on:
+            - task_key: run_on_sample_task_res4  # Depends on the run on sample task 
+          job_cluster_key: era5_approximate_join  # Updated job cluster key
+          notebook_task:
+            notebook_path: ../src/03_Bronze_to_Silver_Approximate_Join_res4/03_Check_Data_Duplication_Approximate_Join.py  
 
       job_clusters:
         - job_cluster_key: era5_approximate_join  # job cluster key
@@ -316,14 +365,28 @@ resources:
             - task_key: unit_tests_task
           job_cluster_key: era5_strict_join  # job cluster key
           notebook_task:
-            notebook_path: ../src/03_Bronze_to_Silver_Strict_Join/03_Bronze_to_Silver_era5_country_strict_join_autoloader.py 
+            notebook_path: ../src/03_Bronze_to_Silver_Strict_Join/03_Bronze_to_Silver_era5_country_strict_join_autoloader.py  
+
+        - task_key: run_on_sample_task_res4
+          depends_on:
+            - task_key: unit_tests_task
+          job_cluster_key: era5_strict_join  # job cluster key
+          notebook_task:
+            notebook_path: ../src/03_Bronze_to_Silver_Strict_Join_res4/03_Bronze_to_Silver_era5_country_strict_join_autoloader.py 
 
         - task_key: data_duplication_check_task
           depends_on:
             - task_key: run_on_sample_task  # Depends on the run on sample task 
           job_cluster_key: era5_strict_join  # Updated job cluster key
           notebook_task:
-            notebook_path: ../src/03_Bronze_to_Silver_Strict_Join/03_Check_Data_Duplication_Strict_Join.py  # Path to notebook
+            notebook_path: ../src/03_Bronze_to_Silver_Strict_Join/03_Check_Data_Duplication_Strict_Join.py   
+
+        - task_key: data_duplication_check_task_res4
+          depends_on:
+            - task_key: run_on_sample_task_res4  # Depends on the run on sample task 
+          job_cluster_key: era5_strict_join  # Updated job cluster key
+          notebook_task:
+            notebook_path: ../src/03_Bronze_to_Silver_Strict_Join_res4/03_Check_Data_Duplication_Strict_Join.py 
 
       job_clusters:
         - job_cluster_key: era5_strict_join  # job cluster key
