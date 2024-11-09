@@ -1,4 +1,4 @@
-## Combined ERA5 Workflow #####
+## Combined ERA5 Workflow for staging #####
 
 name: "Combined ERA5 Workflow"
 
@@ -28,8 +28,8 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
-          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
   run_era5_source_to_staging:
     name: "Run era5_source_to_staging_job"
@@ -48,5 +48,5 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}

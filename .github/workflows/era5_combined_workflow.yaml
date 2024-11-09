@@ -28,8 +28,8 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
-          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
   run_era5_source_to_staging:
     name: "Run era5_source_to_staging_job"
@@ -48,8 +48,8 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
   # Job 2: era5_source_to_bronze_country_boundaries_job
   deploy_era5_source_to_bronze_country_boundaries:
@@ -68,8 +68,8 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
   run_era5_source_to_bronze_country_boundaries:
     name: "Run era5_source_to_bronze_country_boundaries_job"
@@ -87,8 +87,8 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
   # Job 3: era5_staging_to_bronze_interpolation_job
   deploy_era5_staging_to_bronze_interpolation:
@@ -107,8 +107,8 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
   run_era5_staging_to_bronze_interpolation:
     name: "Run era5_staging_to_bronze_interpolation_job"
@@ -126,8 +126,8 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
   # Job 4: era5_bronze_to_silver_country_indices_job
   deploy_era5_bronze_to_silver_country_indices:
@@ -146,8 +146,8 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
   run_era5_bronze_to_silver_country_indices:
     name: "Run era5_bronze_to_silver_country_indices_job"
@@ -165,8 +165,8 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
   # Job 5: era5_bronze_to_silver_approximate_join_job
   deploy_era5_bronze_to_silver_approximate_join:
@@ -185,8 +185,8 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
   run_era5_bronze_to_silver_approximate_join:
     name: "Run era5_bronze_to_silver_approximate_join_job"
@@ -204,8 +204,8 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
   # Job 6: era5_bronze_to_silver_strict_join_job
   deploy_era5_bronze_to_silver_strict_join:
@@ -224,8 +224,8 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
   run_era5_bronze_to_silver_strict_join:
     name: "Run era5_bronze_to_silver_strict_join_job"
@@ -243,5 +243,5 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         env:
            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID_DEVELOPMENT }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET_DEVELOPMENT }}
+           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
