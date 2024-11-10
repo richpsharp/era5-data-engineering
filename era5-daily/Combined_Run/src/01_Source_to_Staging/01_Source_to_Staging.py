@@ -273,7 +273,7 @@ elif workspace_url == staging_workspace_url:
     target_folder = '/Volumes/era5-daily-data/bronze_staging/era5_gwsc_staging_folder'
     table_name="`era5-daily-data`.bronze_staging.era5_inventory_table"
     
-    start_date = '2002-01-01'
+    start_date = '2010-09-01'
     end_date = '2024-10-31'
     source_folder = '/Volumes/aer-processed/era5/daily_summary'
     prefix = 'reanalysis-era5-sfc-daily-'
