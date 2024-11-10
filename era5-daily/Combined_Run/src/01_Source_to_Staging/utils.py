@@ -158,8 +158,24 @@ def copy_and_move_files_by_date_and_keep_inventory(spark, start_date, end_date, 
         # Only append if it's a new version or unknown version
         if new_version or not existing_file_df:
             print(f"Appending file '{filename}' to inventory table.")
-            target_file_path = os.path.join(target_folder, filename)
-            shutil.move(temp_file_path, target_file_path)
+            target_file_path = os.path.join(target_folder, filename) 
+
+            # Check if the temporary file exists before moving
+            if os.path.exists(temp_file_path):
+                try:
+                     shutil.move(temp_file_path, target_file_path)
+                except OSError as e:
+                    if e.errno == errno.EXDEV:
+                        # Handle cross-device move
+                        shutil.copy2(temp_file_path, target_file_path)
+                        os.remove(temp_file_path)
+                    else:
+                        raise
+            else:
+                print(f"Temporary file {temp_file_path} does not exist. Skipping move operation.")
+                return f"Skipped {filename} (temporary file not found)."
+
+
             metadata = [(date_updated, filename, target_file_path, date_modified_in_s3.isoformat())]
             metadata_df = spark.createDataFrame(metadata, schema=["date_updated", "source_file", "Source_File_Path", "date_modified_in_s3"])
 
