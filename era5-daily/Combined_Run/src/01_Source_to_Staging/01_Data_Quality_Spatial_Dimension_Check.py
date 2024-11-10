@@ -1,4 +1,31 @@
 # Databricks notebook source
+from pyspark.sql import SparkSession
+
+
+
+# Get the current workspace URL
+workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.workspaceUrl", None)
+
+# Dev workspace URL
+dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com" 
+
+staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
+
+# COMMAND ----------
+
+if workspace_url == dev_workspace_url:
+  ## Skip the rest of the notebook
+  dbutils.notebook.exit("Skipping this code.")
+elif workspace_url == staging_workspace_url:
+  ## Skip the rest of the notebook
+  dbutils.notebook.exit("Skipping this code.")
+else: 
+  print("Not skipping this code")
+
+
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Notebook Overview: 
 # MAGIC
