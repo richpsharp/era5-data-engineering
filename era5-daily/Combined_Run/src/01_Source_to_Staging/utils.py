@@ -85,8 +85,9 @@ def copy_and_move_files_by_date_and_keep_inventory(spark, start_date, end_date, 
     def process_and_move_file(filepath):
         ## check if the file exists first, if not then skip it
         if not os.path.exists(filepath):
-        print(f"File not found: {filepath}. Skipping.")
-        return f"Skipped {filepath} (file not found)."
+            print(f"File not found: {filepath}. Skipping.")
+            return f"Skipped {filepath} (file not found)."
+
 
         ## file processing if the file exists
         ds = xr.open_dataset(filepath)
