@@ -243,7 +243,7 @@ resources:
               first_on_demand: 1
             runtime_engine: "PHOTON"  # Enabling Photon acceleration
             init_scripts:
-              - workspace:
+              - volumes:
                   destination: "/Volumes/era5-daily-data/init_scripts/geospatial/mosaic-gdal-init.sh"
             autoscale:
               min_workers: 4
@@ -344,7 +344,7 @@ resources:
               first_on_demand: 1
             runtime_engine: "PHOTON"  # Enabling Photon acceleration
             init_scripts:
-              - workspace:
+              - volumes:
                   destination: "/Volumes/era5-daily-data/init_scripts/geospatial/mosaic-gdal-init.sh"
             autoscale:
               min_workers: 2  # Updated minimum workers
