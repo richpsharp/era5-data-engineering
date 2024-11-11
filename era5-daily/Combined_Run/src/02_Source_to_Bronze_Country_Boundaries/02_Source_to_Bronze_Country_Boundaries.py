@@ -1,4 +1,60 @@
 # Databricks notebook source
+from pyspark.sql import SparkSession
+
+
+
+# Get the current workspace URL
+workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.workspaceUrl", None)
+
+# Dev workspace URL
+dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
+
+# Staging workspace URL
+staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Checking if the country bronze table exists
+# MAGIC
+# MAGIC **If it does then do not run the rest of the code** 
+# MAGIC
+# MAGIC **If it does then run the code**
+
+# COMMAND ----------
+
+if workspace_url == dev_workspace_url: 
+
+    
+    # Define the path or table name for the Delta table
+    table_name = '`era5-daily-data`.bronze_dev.esri_worldcountryboundaries_global_bronze_test'
+
+    # Check if the Delta table exists
+    if spark._jsparkSession.catalog().tableExists(table_name):
+        print(f"The Delta table '{table_name}' already exists. Skipping the rest of the notebook.")
+        ## Skip the rest of the notebook
+        dbutils.notebook.exit("The Delta table already exists.")
+    else:
+        print(f"The Delta table '{table_name}' does not exist. Proceeding with the notebook execution.")
+
+elif workspace_url == staging_workspace_url: 
+
+     # Define the path or table name for the Delta table
+    table_name =  '`era5-daily-data`.bronze_staging.esri_worldcountryboundaries_global_bronze'
+
+    # Check if the Delta table exists
+    if spark._jsparkSession.catalog().tableExists(table_name):
+        print(f"The Delta table '{table_name}' already exists. Skipping the rest of the notebook.")
+        ## Skip the rest of the notebook
+        dbutils.notebook.exit("The Delta table already exists.")
+    else:
+        print(f"The Delta table '{table_name}' does not exist. Proceeding with the notebook execution.")
+
+else: 
+    print("This notebook is not intended to be run outside of dev or staging.")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC
 # MAGIC ## Notebook Overview
@@ -52,6 +108,10 @@ dbutils.library.restartPython()
 
 from utils import *
 
+
+# COMMAND ----------
+
+from pyspark.sql import SparkSession
 
 # COMMAND ----------
 
