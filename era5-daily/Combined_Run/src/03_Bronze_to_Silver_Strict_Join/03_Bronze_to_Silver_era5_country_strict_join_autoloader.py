@@ -349,9 +349,9 @@ elif workspace_url == staging_workspace_url:
 
     # Set the parameters for the dev workspace
     bronze_era5_table = "`era5-daily-data`.bronze_staging.aer_era5_bronze_1950_to_present_staging_interpolation"
-    target_silver_table = "`era5-daily-data`.silver_staging.aer_era5_silver_strict_1950_to_present_staging_interpolation"
+    target_silver_table = "`era5-daily-data`.silver_staging.aer_era5_silver_strict_1950_to_present_staging_interpolation_res5"
     country_index_table = "`era5-daily-data`.silver_staging.esri_worldcountryboundaries_global_silver"
-    checkpoint = "/Volumes/era5-daily-data/silver_staging/checkpoints/era5_silver_country_strict_staging"
+    checkpoint = "/Volumes/era5-daily-data/silver_staging/checkpoints/era5_silver_country_strict_staging_res5"
 
     ### Latitude column of the bronze table
     lat_col = "latitude"

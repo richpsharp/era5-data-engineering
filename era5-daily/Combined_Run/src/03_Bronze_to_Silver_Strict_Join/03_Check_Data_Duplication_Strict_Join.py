@@ -99,7 +99,7 @@ elif workspace_url == staging_workspace_url:
     # If in the staging workspace, set the catalog, schema, and table names
     catalog = '`era5-daily-data`'
     schema = 'silver_staging'
-    table = 'aer_era5_silver_strict_1950_to_present_staging_interpolation'
+    table = 'aer_era5_silver_strict_1950_to_present_staging_interpolation_res5'
     
     # Construct the full table name
     full_table_name = f"{catalog}.{schema}.{table}"
