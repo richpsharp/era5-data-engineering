@@ -80,7 +80,7 @@ mos.enable_mosaic(spark, dbutils)
 # COMMAND ----------
 
 spark.conf.set("spark.sql.adaptive.coalescePartitions.enabled", False) # <-- tweak partition management
-spark.conf.set("spark.sql.shuffle.partitions", 32)                 # <-- default is 200. Tuned so that Shuffle partitions are 150-200MB
+spark.conf.set("spark.sql.shuffle.partitions", 200)                 # <-- default is 200. Tuned so that Shuffle partitions are 150-200MB
 
 # COMMAND ----------
 
