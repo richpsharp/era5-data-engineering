@@ -62,7 +62,9 @@ from pyspark.sql import SparkSession
 
 # COMMAND ----------
 
-## Get the current workspace URL
+
+# Get the current workspace URL
+
 workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.workspaceUrl", None)
 
 # COMMAND ----------
