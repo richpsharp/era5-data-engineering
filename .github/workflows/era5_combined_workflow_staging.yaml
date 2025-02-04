@@ -10,6 +10,7 @@ on:
 
 jobs:
   deploy_and_run_combined_job:
+    if: github.base_ref == 'staging' && github.head_ref == 'dev-main'
     name: "Deploy and Run Combined ERA5 Jobs"
     runs-on: ubuntu-latest
 
