@@ -1,34 +1,13 @@
 # Databricks notebook source
-#######
-from pyspark.sql import SparkSession
-
-
-
-# Get the current workspace URL
-workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.workspaceUrl", None)
-
-# Dev workspace URL
-dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com" 
-
-staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
-
-# COMMAND ----------
-
-if workspace_url == dev_workspace_url:
-  ## Skip the rest of the notebook
-  dbutils.notebook.exit("Skipping this code.")
-elif workspace_url == staging_workspace_url:
-  ## Skip the rest of the notebook
-  dbutils.notebook.exit("Skipping this code.")
-else: 
-  print("Not skipping this code")
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC # Notebook Overview
 # MAGIC
 # MAGIC This notebook is responsible for identifying and handling duplicate entries in the ERA5 climate dataset within the bronze-tier table. It focuses on spatial and temporal consistency by checking for duplicate `latitude`, `longitude`, and `time` combinations and verifying the integrity of key climate variables.
+# MAGIC
+# MAGIC
+# MAGIC __Authors:__ Sambadi Majumder | __Maintained:__ Sambadi Majumder |__Last Modified:__ 12/12/2024
+# MAGIC
+# MAGIC ---
 # MAGIC
 # MAGIC ## Key Components:
 # MAGIC

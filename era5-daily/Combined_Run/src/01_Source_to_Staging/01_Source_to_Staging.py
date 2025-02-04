@@ -1,37 +1,13 @@
 # Databricks notebook source
-from pyspark.sql import SparkSession
-
-
-
-# Get the current workspace URL
-workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.workspaceUrl", None)
-
-# Dev workspace URL
-dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com" 
-
-staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
-
-# COMMAND ----------
-
-if workspace_url == dev_workspace_url:
-  ## Skip the rest of the notebook
-  dbutils.notebook.exit("Skipping this code.")
-elif workspace_url == staging_workspace_url:
-  ## Skip the rest of the notebook
-  dbutils.notebook.exit("Skipping this code.")
-else: 
-  print("Not skipping this code")
-
-
-
-
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC
 # MAGIC ### **Notebook Overview**
-# MAGIC This notebook is responsible for moving ERA5 climate data from the raw source to the staging area in Databricks. It includes conditional logic to process a small subset of data in the development environment and ensures the proper creation and validation of Delta tables. The notebook primarily focuses on handling data ingestion, table schema checks, and file processing for effective data management in the pipeline.
+# MAGIC This notebook is responsible for moving ERA5 climate data from the source folder (`aer-processed`) to the internal staging folder (`era5_gwsc`). It includes conditional logic to process a small subset of data in the development environment and ensures the proper creation and validation of an inventory delta table. The inventory table keeps record of all files moved from the source folder to the internal staging folder and thus provides traceability and ensures that all processed files are accounted for in the data pipeline.
+# MAGIC
+# MAGIC The notebook primarily focuses on handling file processing and transfers, as well as table schema checks for effective data management in the pipeline.
+# MAGIC
+# MAGIC
+# MAGIC __Author:__ Sambadi Majumder | __Maintained:__ Sambadi Majumder |__Last Modified:__ 12/12/2024 
 # MAGIC
 # MAGIC ---
 # MAGIC
@@ -49,7 +25,56 @@ else:
 # MAGIC
 # MAGIC 4. **Data Processing and File Movement**
 # MAGIC    - If the notebook is running in the development workspace, it processes a small subset of files for a defined date range.
-# MAGIC    - Files are moved from the source folder to the staging folder, and the inventory of processed files is maintained in the Delta table.
+# MAGIC    - Files are moved from the source folder to the staging folder, and the inventory of processed files is maintained in the inventory Delta table.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### **File Versioning Logic**
+# MAGIC #### Initial Metadata Retrieval and Validation
+# MAGIC - **`date_created`** and **`date_updated`** are retrieved from the NetCDF file's metadata attributes. These values are parsed into a valid date format. If parsing fails due to an invalid format, the date is set to `None`.
+# MAGIC - **`date_modified_in_s3`** is determined by the file's modification timestamp in the S3 storage.
+# MAGIC
+# MAGIC #### File Versioning Logic
+# MAGIC 1. **If both `date_created` and `date_updated` are `None`**:
+# MAGIC    - The file is labeled as an **unknown version**.
+# MAGIC    - Its filename is updated to include the suffix `_unknown_version.nc`.
+# MAGIC    - This indicates that the pipeline creating the file failed to populate either date field, requiring further investigation.
+# MAGIC
+# MAGIC 2. **If `date_updated` is `None` but `date_created` is present**:
+# MAGIC    - The file is treated as a valid version based on the creation date.
+# MAGIC    - Its filename remains unchanged unless a newer version is detected.
+# MAGIC
+# MAGIC 3. **If `date_updated` is present but `date_created` is `None`**:
+# MAGIC    - The file is assumed to have been updated, but the creation date was overwritten or missing.
+# MAGIC    - If the filename does not contain `_v1.1`, the file is treated as a replacement of an older version in the staging folder.
+# MAGIC
+# MAGIC 4. **If both `date_created` and `date_updated` are present**:
+# MAGIC    - The pipeline checks the filename for the suffix `_v1.1`. If present, it indicates that the older version already exists in the staging folder.
+# MAGIC    - If not present, the pipeline compares the `date_updated` and `date_modified_in_s3` values against the corresponding values of the existing file in the inventory table.
+# MAGIC
+# MAGIC #### Comparison with Existing File in Inventory
+# MAGIC - If the file already exists in the inventory, the `date_updated` and `date_modified_in_s3` values are compared:
+# MAGIC   - **If `date_updated` is more recent** than the existing file's `date_updated` value, or
+# MAGIC   - **If `date_modified_in_s3` is more recent** than the existing file's `date_modified_in_s3` value:
+# MAGIC     - The file is treated as a new version.
+# MAGIC     - Its filename is updated to include the suffix `_v1.1.nc` to indicate its updated status.
+# MAGIC - If neither condition is met, the file is considered unchanged, and no updates are made to its filename or the inventory.
+# MAGIC
+# MAGIC #### Actions Based on Versioning
+# MAGIC - **For New or Updated Versions**:
+# MAGIC   - The file is appended to the inventory table, and its metadata is updated with the new filename.
+# MAGIC   - The file is moved from the temporary path to the target staging folder.
+# MAGIC - **For Unchanged Files**:
+# MAGIC   - The file is not appended to the inventory table, and no further action is taken.
+# MAGIC
+# MAGIC ### **Summary of Filename Changes**
+# MAGIC - **`_unknown_version.nc`**: Both `date_created` and `date_updated` are missing.
+# MAGIC - **No Change**: The file is valid with either `date_created` or `date_updated` but is not a new version.
+# MAGIC - **`_v1.1.nc`**: The file is a new or updated version based on `date_updated` or `date_modified_in_s3` comparison.
+# MAGIC
+# MAGIC This approach ensures accurate version tracking of files while maintaining traceability and consistency in the staging folder and inventory table.
+# MAGIC
 
 # COMMAND ----------
 
@@ -151,31 +176,35 @@ staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
 # MAGIC
 # MAGIC ### Delta Table Existence and Schema Validation
 # MAGIC
-# MAGIC - This section of the code checks if the script is running in the development workspace (`dev_workspace_url`).
+# MAGIC - This section of the code checks if the script is running in the development workspace (`dev_workspace_url`) or staging staging workspace (`staging_workspace_url`).
 # MAGIC   
-# MAGIC - If the script is in the development workspace:
-# MAGIC   - It defines the Delta table name (`era5_inventory_table`) and the schema for the table, which includes columns like `date_updated`, `source_file`, and `date_modified_in_s3`.
+# MAGIC - If the script is in the development or staging workspace:
+# MAGIC   - It defines the Delta table name (`era5_inventory_table`) and the schema for the table, which includes the following columns:
+# MAGIC     - **`date_created`**: The timestamp when the source netcdf file was created.
+# MAGIC     - **`date_updated`**: The timestamp when the source netcdf file was last updated.
+# MAGIC     - **`source_file`**: The name of the file that was processed and moved.
+# MAGIC     - **`source_file_path`**: The path of the file in the folder.
+# MAGIC     - **`date_modified_in_s3`**: The timestamp indicating when the file was last modified in the S3 storage system.
 # MAGIC   - The code checks if the Delta table already exists:
 # MAGIC     - If the table exists, it compares its current schema with the predefined schema.
 # MAGIC     - If the schemas match, no further action is needed. If they differ, a manual adjustment is recommended.
 # MAGIC   - If the table does not exist, it creates a new Delta table with the specified schema.
 # MAGIC
-# MAGIC - If the script is not in the dev workspace, the function does not run.
+# MAGIC - If the script is not in the dev or staging workspace, the function does not run.
 # MAGIC
 
 # COMMAND ----------
 
-
-
 # Conditional logic to set the target_folder and execute the Delta table check based on the workspace URL
 if workspace_url == dev_workspace_url:
-    
+
     # Define the Delta table name in Databricks
     delta_table_name = "`era5-daily-data`.bronze_dev.era5_inventory_table"
 
-    # Define the schema (removed 'date_created')
+    # Define the schema (if needed for initial creation)
     table_schema = StructType([
         StructField("date_updated", DateType(), True),
+        StructField("date_created", DateType(), True),
         StructField("source_file", StringType(), True),
         StructField("Source_File_Path", StringType(), True),
         StructField("date_modified_in_s3", TimestampType(), True)
@@ -185,23 +214,26 @@ if workspace_url == dev_workspace_url:
     if spark.catalog.tableExists(delta_table_name):
         print(f"Delta table exists: {delta_table_name}")
         
-        # Load the Delta table
+        # Validate or evolve the schema to include `date_created`
         delta_table = DeltaTable.forName(spark, delta_table_name)
-        
-        # Get the current schema of the Delta table
-        current_schema = delta_table.toDF().schema
-        
-        # Compare the schemas (simple comparison for field names and types)
-        if current_schema != table_schema:
-            print("Schema differs, please manually adjust the schema.")
+        existing_schema = delta_table.toDF().schema
+        existing_fields = {field.name for field in existing_schema.fields}
+        new_fields = {field.name for field in table_schema.fields} - existing_fields
+
+        if new_fields:
+            print(f"Adding new fields through schema evolution: {new_fields}")
+            # Append an empty DataFrame with the updated schema to trigger schema evolution
+            empty_df = spark.createDataFrame([], table_schema)
+            empty_df.write.format("delta").mode("append").option("mergeSchema", "true").saveAsTable(delta_table_name)
+            print(f"Schema evolution completed for {delta_table_name}.")
         else:
-            print("Schema matches, no action needed.")
+            print("No schema evolution required; all fields are already present.")
     else:
         print(f"Delta table does not exist: {delta_table_name}")
         
         # Create a new Delta table with the defined schema
         empty_df = spark.createDataFrame([], table_schema)
-        empty_df.write.format("delta").saveAsTable(delta_table_name)
+        empty_df.write.format("delta").option("mergeSchema", "true").saveAsTable(delta_table_name)
         print(f"Delta table created successfully: {delta_table_name}")
 
 
@@ -209,9 +241,10 @@ elif workspace_url == staging_workspace_url:
     # Define the Delta table name in Databricks
     delta_table_name = "`era5-daily-data`.bronze_staging.era5_inventory_table"
 
-    # Define the schema (removed 'date_created')
+    # Define the schema (if needed for initial creation)
     table_schema = StructType([
         StructField("date_updated", DateType(), True),
+        StructField("date_created", DateType(), True),
         StructField("source_file", StringType(), True),
         StructField("Source_File_Path", StringType(), True),
         StructField("date_modified_in_s3", TimestampType(), True)
@@ -221,31 +254,31 @@ elif workspace_url == staging_workspace_url:
     if spark.catalog.tableExists(delta_table_name):
         print(f"Delta table exists: {delta_table_name}")
         
-        # Load the Delta table
+        # Validate or evolve the schema to include `date_created`
         delta_table = DeltaTable.forName(spark, delta_table_name)
-        
-        # Get the current schema of the Delta table
-        current_schema = delta_table.toDF().schema
-        
-        # Compare the schemas (simple comparison for field names and types)
-        if current_schema != table_schema:
-            print("Schema differs, please manually adjust the schema.")
+        existing_schema = delta_table.toDF().schema
+        existing_fields = {field.name for field in existing_schema.fields}
+        new_fields = {field.name for field in table_schema.fields} - existing_fields
+
+        if new_fields:
+            print(f"Adding new fields through schema evolution: {new_fields}")
+            # Append an empty DataFrame with the updated schema to trigger schema evolution
+            empty_df = spark.createDataFrame([], table_schema)
+            empty_df.write.format("delta").mode("append").option("mergeSchema", "true").saveAsTable(delta_table_name)
+            print(f"Schema evolution completed for {delta_table_name}.")
         else:
-            print("Schema matches, no action needed.")
+            print("No schema evolution required; all fields are already present.")
     else:
         print(f"Delta table does not exist: {delta_table_name}")
         
         # Create a new Delta table with the defined schema
         empty_df = spark.createDataFrame([], table_schema)
-        empty_df.write.format("delta").saveAsTable(delta_table_name)
+        empty_df.write.format("delta").option("mergeSchema", "true").saveAsTable(delta_table_name)
         print(f"Delta table created successfully: {delta_table_name}")
 
-        
-    
 else:
-    # Do not run if not in the dev workspace
+    # Do not run if not in the dev or staging workspace
     print("This function is not executed in this workspace.")
-
 
 
 # COMMAND ----------
@@ -271,29 +304,39 @@ else:
 
 # COMMAND ----------
 
-# Conditional logic to set the target_folder based on the workspace URL
 if workspace_url == dev_workspace_url:
     # If in the dev workspace, run on a small subset of the data
     target_folder = '/Volumes/era5-daily-data/bronze_dev/era5_gwsc_staging_folder'
     table_name="`era5-daily-data`.bronze_dev.era5_inventory_table"
     
     start_date = '1950-01-01'
-    end_date = '1950-12-31'
+    end_date = '1951-12-31'
     source_folder = '/Volumes/aer-processed/era5/daily_summary'
     prefix = 'reanalysis-era5-sfc-daily-'
     date_pattern = '%Y-%m-%d'
     source_file_attr = 'source_file'
+
+    # Dynamically extract schema or define it
+    if spark.catalog.tableExists(table_name):
+        table_schema = DeltaTable.forName(spark, table_name).toDF().schema
+        print(f"Dynamically extracted schema for table {table_name}:")
+        for field in table_schema:
+            print(f"  {field.name}: {field.dataType}")
+    else:
+        print(f"Table does not exist. Please create the table first")
+        
     
-    # Run your function with the small subset of data
+    # Run your function
     copy_and_move_files_by_date_and_keep_inventory(spark,
                                                    start_date, 
                                                    end_date, 
                                                    source_folder, 
                                                    target_folder, 
-                                                    prefix,
-                                                    table_name,
-                                                    date_pattern,
-                                                    source_file_attr)
+                                                   prefix,
+                                                   table_schema,
+                                                   table_name,
+                                                   date_pattern,
+                                                   source_file_attr)
     
     print("Function executed in the dev workspace on a small subset of the data.")
 
@@ -302,27 +345,38 @@ elif workspace_url == staging_workspace_url:
     target_folder = '/Volumes/era5-daily-data/bronze_staging/era5_gwsc_staging_folder'
     table_name="`era5-daily-data`.bronze_staging.era5_inventory_table"
     
-    start_date = '2010-09-01'
-    end_date = '2024-10-31'
+    start_date = '1950-01-01'
+    end_date = '2023-12-31'
     source_folder = '/Volumes/aer-processed/era5/daily_summary'
     prefix = 'reanalysis-era5-sfc-daily-'
     date_pattern = '%Y-%m-%d'
     source_file_attr = 'source_file'
+
+    # Dynamically extract schema or define it
+    if spark.catalog.tableExists(table_name):
+        table_schema = DeltaTable.forName(spark, table_name).toDF().schema
+        print(f"Dynamically extracted schema for table {table_name}:")
+        for field in table_schema:
+            print(f"  {field.name}: {field.dataType}")
+    else:
+        print(f"Table does not exist. Please create the table first")
+        
     
-    # Run your function with the small subset of data
+    # Run your function
     copy_and_move_files_by_date_and_keep_inventory(spark,
                                                    start_date, 
                                                    end_date, 
                                                    source_folder, 
                                                    target_folder, 
-                                                    prefix,
-                                                    table_name,
-                                                    date_pattern,
-                                                    source_file_attr)
+                                                   prefix,
+                                                   table_schema,
+                                                   table_name,
+                                                   date_pattern,
+                                                   source_file_attr)
     
     print("Function executed in the staging workspace on the entire data.")
-
 
 else:
     # Do not run the function if not in the dev workspace
     print("This function is not executed in this workspace.")
+

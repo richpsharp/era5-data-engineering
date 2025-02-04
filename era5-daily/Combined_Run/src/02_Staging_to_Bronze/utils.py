@@ -3,6 +3,7 @@ import pandas as pd
 import xarray as xr
 import os 
 from pyspark.sql import SparkSession
+from pyspark.sql.types import DateType, TimestampType
 from pyspark.sql.types import StructType, StructField, FloatType, StringType, TimestampType, LongType, BinaryType
 from datetime import datetime
 
@@ -12,6 +13,7 @@ def netcdf_to_bronze_autoloader(spark, source_file_location, output_schema, chec
                                 streaming_query_name, data_format, table_name, schema_name,
                                 catalog_name, write_mode, data_provider, reference_ds_path,
                                 date_created_attr='date_created',
+                                date_update_attr='date_updated',
                                 interpolation_method='linear'):
     
     ### check if the reference dataset is available
@@ -74,19 +76,32 @@ def netcdf_to_bronze_autoloader(spark, source_file_location, output_schema, chec
                 interpolated_df['data_provider'] = data_provider
                 interpolated_df['source_file'] = xds.attrs.get('source_file', None)
 
-                # Convert file_modified_in_s3 to datetime
+                
+                
+                # Handle date_created
+                file_creation_date = xds.attrs.get(date_created_attr, None)
+                if file_creation_date: 
+                    interpolated_df['date_created'] = pd.to_datetime(file_creation_date,format='%Y-%m-%d', errors='coerce')
+                else: 
+                    interpolated_df['date_created'] = pd.NaT 
+
+
+                # Handle date_updated
+                file_update_date = xds.attrs.get(date_update_attr, None)
+                if file_update_date:
+                    interpolated_df['date_updated'] = pd.to_datetime(file_update_date,format='%Y-%m-%d', errors='coerce')
+                else:
+                    interpolated_df['date_updated'] = pd.NaT
+
+
+                # Handle file_modified_in_s3
                 file_modified_in_s3 = xds.attrs.get('date_modified_in_s3', None)
                 if file_modified_in_s3:
-                    interpolated_df['file_modified_in_s3'] = pd.to_datetime(file_modified_in_s3)
-                else:
-                    interpolated_df['file_modified_in_s3'] = None
+                    interpolated_df['file_modified_in_s3'] = pd.to_datetime(file_modified_in_s3,errors='coerce')
+                else: 
+                    interpolated_df['file_modified_in_s3'] = pd.NaT
 
-                # Populate date_created based on specified attribute
-                file_creation_date = xds.attrs.get(date_created_attr, None)
-                if file_creation_date:
-                    interpolated_df['date_created'] = pd.to_datetime(file_creation_date)
-                else:
-                    interpolated_df['date_created'] = None
+
 
                 # Yield the DataFrame for Spark processing
                 yield interpolated_df.reset_index(drop=True)

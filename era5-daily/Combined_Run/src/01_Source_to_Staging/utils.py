@@ -12,7 +12,9 @@ from pyspark.sql.types import StructType, StructField, FloatType, StringType, Ti
 from pyspark.sql.types import DateType, TimestampType
 from pyspark.sql.functions import to_date
 
-def copy_and_move_files_by_date_and_keep_inventory(spark, start_date, end_date, source_folder, target_folder, prefix, table_name="pilot.bronze_test.era5_inventory_table", date_pattern='%Y-%m-%d', source_file_attr='source_file'):
+
+
+def copy_and_move_files_by_date_and_keep_inventory(spark,start_date, end_date, source_folder, target_folder, prefix, table_schema,table_name="pilot.bronze_test.era5_inventory_table", date_pattern='%Y-%m-%d', source_file_attr='source_file'):
     """
     Process and move NetCDF files from one folder to another based on a date range and a prefix, and update an inventory Delta table.
 
@@ -29,30 +31,55 @@ def copy_and_move_files_by_date_and_keep_inventory(spark, start_date, end_date, 
     Returns:
     - None
     """
-    # Define a function to check schema, cast, and handle schema evolution
-    def perform_schema_evolution_with_debug(spark, df, table_name):
-        # Load the existing schema from the Delta table
-        delta_table = DeltaTable.forName(spark, table_name)
-        existing_schema = delta_table.toDF().schema
-        print("Existing Delta Table Schema:")
-        for field in existing_schema:
-            print(f"Field: {field.name}, Type: {field.dataType}")
+    
+    def validate_and_merge_schema(spark, df, table_name):
+      """
+      Perform schema evolution with debug information.
 
-        # Print the schema of the DataFrame you're trying to write
-        print("DataFrame Schema:")
-        for field in df.schema:
-            print(f"Field: {field.name}, Type: {field.dataType}")
+      Parameters:
+      - spark: SparkSession object.
+      - df: DataFrame to write to the Delta table.
+      - table_name: Name of the Delta table.
 
-        # Cast the fields to match the Delta table schema if needed
-        df = df.withColumn("date_updated", df["date_updated"].cast(DateType()))  # Ensure DateType consistency
-        df = df.withColumn("date_modified_in_s3", df["date_modified_in_s3"].cast(TimestampType()))
+      Returns:
+      - None
+      """
+      # Load the existing Delta table
+      try:
+          delta_table = DeltaTable.forName(spark, table_name)
+          existing_schema = delta_table.toDF().schema
+          print("Existing Delta Table Schema:")
+          for field in existing_schema:
+              print(f"Field: {field.name}, Type: {field.dataType}")
+      except Exception as e:
+          print(f"Delta table '{table_name}' does not exist or cannot be loaded: {e}")
+          existing_schema = None
 
-        # Write the DataFrame with schema evolution enabled
-        (df.write
-         .format("delta")
-         .mode("append")
-         .option("mergeSchema", "true")  # Enable schema evolution
-         .saveAsTable(table_name))
+      # Print the incoming DataFrame schema
+      print("Incoming DataFrame Schema:")
+      for field in df.schema:
+          print(f"Field: {field.name}, Type: {field.dataType}")
+
+      # Perform type casting to ensure compatibility
+      df = df.withColumn("date_updated", df["date_updated"].cast(DateType()))
+      df = df.withColumn("date_modified_in_s3", df["date_modified_in_s3"].cast(TimestampType()))
+
+      # Debug DataFrame after casting
+      print("DataFrame after casting:")
+      df.show()
+
+      # Write to the Delta table with schema evolution enabled
+      try:
+          (df.write
+            .format("delta")
+            .mode("append")
+            .option("mergeSchema", "true")  # Enable schema evolution
+            .saveAsTable(table_name))
+          print(f"Data successfully written to Delta table '{table_name}' with schema evolution enabled.")
+      except Exception as e:
+          print(f"Error while writing to Delta table: {e}")
+
+    
 
     # Parse dates
     start_date = datetime.strptime(start_date, date_pattern)
@@ -61,7 +88,7 @@ def copy_and_move_files_by_date_and_keep_inventory(spark, start_date, end_date, 
 
     # List all files in the source folder that match the prefix
     all_files = [filename for filename in os.listdir(source_folder) if filename.startswith(prefix) and filename.endswith(".nc")]
-    print(f"All files found: {all_files}")
+    
 
     # Initialize list for files within date range
     filepaths_in_range = []
@@ -93,13 +120,25 @@ def copy_and_move_files_by_date_and_keep_inventory(spark, start_date, end_date, 
         ds = xr.open_dataset(filepath)
         filename = os.path.basename(filepath)
         date_updated = ds.attrs.get('date_updated', None)
+        date_created = ds.attrs.get('date_created', None) # Retrieve date created 
 
+        ## parse date in date_updated if it exists
         if date_updated:
             try:
                 date_updated = datetime.strptime(date_updated, "%m/%d/%Y").date()
             except ValueError:
                 print(f"Invalid date format for date_updated: {date_updated}")
-                date_updated = None
+                date_updated = None 
+
+        ## parse date in date_created if it exists
+        if date_created: 
+            try: 
+                date_created = datetime.strptime(date_created, "%m/%d/%Y").date()
+            except ValueError:
+                print(f"Invalid date format for date_created: {date_created}")
+                date_created = None  
+
+        print(f"Processing file: {filename}, date_updated: {date_updated}, date_created: {date_created}")
 
         temp_file_path = os.path.join('/tmp/', filename)
         ds.to_netcdf(temp_file_path)
@@ -107,12 +146,16 @@ def copy_and_move_files_by_date_and_keep_inventory(spark, start_date, end_date, 
 
         print(f"Processing file: {filename}, date_updated: {date_updated}, date_modified_in_s3: {date_modified_in_s3}")
 
+        # Update metadata in the temp file
         with nc.Dataset(temp_file_path, 'a') as dst:
             dst.setncattr('date_updated', str(date_updated) if date_updated is not None else 'null')
+            dst.setncattr('date_created', str(date_created) if date_created is not None else 'null')
             dst.setncattr(source_file_attr, filename)
             dst.setncattr('date_modified_in_s3', date_modified_in_s3.isoformat())
 
+
         delta_table = DeltaTable.forName(spark, table_name)
+        
         existing_file_df = delta_table.toDF().filter(f"source_file = '{filename}'").collect()
 
         if existing_file_df:
@@ -122,11 +165,17 @@ def copy_and_move_files_by_date_and_keep_inventory(spark, start_date, end_date, 
 
         # Handle versioning
         new_version = False  # Add a flag to track whether it's a new version
-        if date_updated is None:
+        if date_updated is None and date_created is None:
+            # If both dates are missing, label as unknown version
             filename = filename.replace('.nc', '_unknown_version.nc')
             temp_file_path = temp_file_path.replace('.nc', '_unknown_version.nc')
             new_version = True
-            print(f"Appending unknown version of '{filename}' to inventory.")
+            print(f"Appending unknown version of '{filename}' to inventory.") 
+
+        elif date_updated is None and date_created is not None:
+            # Handle files with only date_created but no date_updated
+            print(f"Processing file '{filename}' with date_created only, treating as known version.")
+
         else:
             if existing_file_df:
                 existing_file = existing_file_df[0]
@@ -176,13 +225,48 @@ def copy_and_move_files_by_date_and_keep_inventory(spark, start_date, end_date, 
                 return f"Skipped {filename} (temporary file not found)."
 
 
-            metadata = [(date_updated, filename, target_file_path, date_modified_in_s3.isoformat())]
-            metadata_df = spark.createDataFrame(metadata, schema=["date_updated", "source_file", "Source_File_Path", "date_modified_in_s3"])
+            
+            metadata = [(date_updated, date_created, filename, target_file_path, date_modified_in_s3)]
 
-            metadata_df = metadata_df.withColumn("date_updated", metadata_df["date_updated"].cast(DateType()))
+
+            # Debug metadata
+            print("Metadata before creating DataFrame:")
+            for item in metadata:
+              print(f"  {item}")
+            print("Metadata field types:")
+            for item in metadata[0]:
+              print(f"  {type(item)}")
+            
+
+            print("Extracted or defined schema:")
+            for field in table_schema:
+              print(f"  {field.name}: {field.dataType}") 
+
+            metadata_df = spark.createDataFrame(metadata, schema=table_schema) 
+
+            # Debug DataFrame
+            print("DataFrame after creation:")
+            metadata_df.show()
+            print("DataFrame schema after creation:")
+            metadata_df.printSchema()
+
+            # Debug before casting
+            print("DataFrame schema before casting:")
+            metadata_df.printSchema()
+
+
             metadata_df = metadata_df.withColumn("date_modified_in_s3", metadata_df["date_modified_in_s3"].cast(TimestampType()))
+            metadata_df = metadata_df.withColumn("date_created", metadata_df["date_created"].cast(DateType()))
 
-            perform_schema_evolution_with_debug(spark, metadata_df, table_name)
+            # Debug after casting
+            print("DataFrame schema after casting:")
+            metadata_df.printSchema()
+            metadata_df.show()
+
+
+            # Call the schema evolution function
+            validate_and_merge_schema(spark, metadata_df, table_name)
+
         else:
             print(f"No append for '{filename}', no version change.")
 

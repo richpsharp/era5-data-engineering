@@ -1,36 +1,13 @@
 # Databricks notebook source
-from pyspark.sql import SparkSession
-
-
-
-# Get the current workspace URL
-workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.workspaceUrl", None)
-
-# Dev workspace URL
-dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com" 
-
-staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
-
-# COMMAND ----------
-
-if workspace_url == dev_workspace_url:
-  ## Skip the rest of the notebook
-  dbutils.notebook.exit("Skipping this code.")
-elif workspace_url == staging_workspace_url:
-  ## Skip the rest of the notebook
-  dbutils.notebook.exit("Skipping this code.")
-else: 
-  print("Not skipping this code")
-
-
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## Notebook Overview: 
 # MAGIC
 # MAGIC ### Purpose:
-# MAGIC This notebook ensures the spatial quality of NetCDF files used in the ERA5 climate data pipeline. It verifies that the files in the development workspace have the correct spatial dimensions, specifically the expected number of longitude and latitude points, before further processing.
+# MAGIC This notebook ensures the spatial quality of NetCDF files used in the ERA5 climate data pipeline. It verifies that the files in the development workspace have the correct spatial dimensions, specifically the expected number of longitude and latitude points, before further processing. 
+# MAGIC
+# MAGIC __Author:__ Sambadi Majumder | __Maintained:__ Sambadi Majumder |__Last Modified:__ 12/12/2024
+# MAGIC
+# MAGIC ---
 # MAGIC
 # MAGIC ### Key Components:
 # MAGIC 1. **Package Installation**: Installs necessary packages such as `numpy`, `xarray`, and `netCDF4` for working with NetCDF files.

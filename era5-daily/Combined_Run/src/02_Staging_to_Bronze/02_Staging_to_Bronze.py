@@ -2,7 +2,11 @@
 # MAGIC %md
 # MAGIC ### Notebook Overview
 # MAGIC
-# MAGIC This notebook is responsible for processing data from the staging area and moving it to the bronze-tier Delta table. The process involves continuous streaming ingestion of NetCDF files, using Databricks' autoloader, to efficiently load and append data to the bronze table.
+# MAGIC This notebook is responsible for extracting data from raw netcdf files in the staging area and loading it to the bronze-tier Delta table. The process involves continuous streaming ingestion of NetCDF files, using Databricks' autoloader, to efficiently load and append data to the bronze table. 
+# MAGIC
+# MAGIC __Authors:__ Harlan Kadish and Sambadi Majumder | __Maintained:__ Sambadi Majumder |__Last Modified:__ 12/12/2024
+# MAGIC
+# MAGIC ---
 # MAGIC
 # MAGIC #### Key Components:
 # MAGIC - **Workspace URL Conditional Logic**:  
@@ -58,7 +62,7 @@ from pyspark.sql import SparkSession
 
 # COMMAND ----------
 
-# Define the expected netCDF data schema, so we can construct the Spark dataframe
+# Define the expected netCDF data schema, so we can construct the Spark dataframe (Bronze Table Schema)
 
 ## decide what your output table might look like
 
@@ -75,8 +79,14 @@ output_schema = StructType([
     StructField("Source_File_Path", StringType(), True),
     StructField("Ingest_Timestamp", TimestampType(), True),
     StructField("data_provider", StringType(), True),
-    StructField("date_created", TimestampType(), True)
+    StructField("date_created", DateType(), True),
+    StructField("date_updated", DateType(), True)
 ])
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC **This retrieves the current Databricks workspace URL to determine the execution environment.**
 
 # COMMAND ----------
 
@@ -143,7 +153,8 @@ if workspace_url == dev_workspace_url:
     catalog_name = '`era5-daily-data`'
     write_mode = 'append'
     data_provider = 'Atmospheric and Environmental Research (AER)'
-    date_created_attr = 'date_updated'
+    date_created_attr = 'date_created'
+    date_update_attr='date_updated'   
 
     # Run your function with the small subset of data 
     netcdf_to_bronze_autoloader(
@@ -159,6 +170,7 @@ if workspace_url == dev_workspace_url:
         write_mode=write_mode,
         data_provider=data_provider,
         date_created_attr=date_created_attr,
+        date_update_attr=date_update_attr,
         reference_ds_path=reference_ds_path
     )
 
@@ -177,7 +189,8 @@ elif workspace_url == staging_workspace_url:
     catalog_name = '`era5-daily-data`'
     write_mode = 'append'
     data_provider = 'Atmospheric and Environmental Research (AER)'
-    date_created_attr = 'date_updated'
+    date_created_attr = 'date_created'
+    date_update_attr='date_updated'
 
     # Run your function with the small subset of data 
     netcdf_to_bronze_autoloader(
@@ -193,6 +206,7 @@ elif workspace_url == staging_workspace_url:
         write_mode=write_mode,
         data_provider=data_provider,
         date_created_attr=date_created_attr,
+        date_update_attr=date_update_attr,
         reference_ds_path=reference_ds_path
     )
 

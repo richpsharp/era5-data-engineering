@@ -1,16 +1,28 @@
 # Databricks notebook source
-from pyspark.sql import SparkSession
-
-
-
-# Get the current workspace URL
-workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.workspaceUrl", None)
-
-# Dev workspace URL
-dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
-
-# Staging workspace URL
-staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
+# MAGIC %md
+# MAGIC
+# MAGIC ## Notebook Overview
+# MAGIC
+# MAGIC ### Objective:
+# MAGIC This notebook is designed to process and transform country boundary shapefiles into bronze-tier Delta tables within the Databricks environment. It ensures that the geometries are properly transformed and stored, while handling execution logic based on the current workspace environment. 
+# MAGIC
+# MAGIC __Author:__ Sambadi Majumder | __Maintained:__ Sambadi Majumder |__Last Modified:__ 12/12/2024
+# MAGIC
+# MAGIC ---
+# MAGIC
+# MAGIC ### Key Tasks:
+# MAGIC 1. **Library Installations**: Installs necessary geospatial libraries such as `geopandas` and `tqdm` for shapefile processing.
+# MAGIC 2. **Workspace Check**: Verifies the current Databricks workspace URL to ensure that the script only executes in the designated development environment.
+# MAGIC 3. **Shapefile Processing**: 
+# MAGIC    - Utilizes the `process_shapefile_to_delta()` function to load a country boundary shapefile, process its geometries, and write the results to a Delta table.
+# MAGIC    - Includes a CRS transformation to EPSG 4326 for consistency in spatial operations.
+# MAGIC 4. **Exit Condition**: If the script is not running in the development workspace, it safely exits without executing the processing function.
+# MAGIC
+# MAGIC ### Key Concepts:
+# MAGIC - **Shapefile Processing**: Conversion of vector data (country boundaries) into a Delta table format for downstream analysis.
+# MAGIC - **CRS Transformation**: Ensures that all geometries are standardized using EPSG 4326 for spatial compatibility.
+# MAGIC - **Workspace-Conditional Execution**: Prevents execution in non-development environments to ensure proper testing and data integrity.
+# MAGIC
 
 # COMMAND ----------
 
@@ -20,6 +32,27 @@ staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
 # MAGIC **If it does then do not run the rest of the code** 
 # MAGIC
 # MAGIC **If it does then run the code**
+
+# COMMAND ----------
+
+
+from pyspark.sql import SparkSession
+
+# Get the Databricks workspace URL from Spark configuration
+workspace_url = spark.conf.get("spark.databricks.workspaceUrl", None)
+
+# Print the workspace URL to verify
+print(workspace_url)
+
+# COMMAND ----------
+
+# Dev workspace URL
+dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
+
+# COMMAND ----------
+
+# Staging workspace URL
+staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
 
 # COMMAND ----------
 
@@ -52,29 +85,6 @@ elif workspace_url == staging_workspace_url:
 
 else: 
     print("This notebook is not intended to be run outside of dev or staging.")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC
-# MAGIC ## Notebook Overview
-# MAGIC
-# MAGIC ### Objective:
-# MAGIC This notebook is designed to process and transform country boundary shapefiles into bronze-tier Delta tables within the Databricks environment. It ensures that the geometries are properly transformed and stored, while handling execution logic based on the current workspace environment.
-# MAGIC
-# MAGIC ### Key Tasks:
-# MAGIC 1. **Library Installations**: Installs necessary geospatial libraries such as `geopandas` and `tqdm` for shapefile processing.
-# MAGIC 2. **Workspace Check**: Verifies the current Databricks workspace URL to ensure that the script only executes in the designated development environment.
-# MAGIC 3. **Shapefile Processing**: 
-# MAGIC    - Utilizes the `process_shapefile_to_delta()` function to load a country boundary shapefile, process its geometries, and write the results to a Delta table.
-# MAGIC    - Includes a CRS transformation to EPSG 4326 for consistency in spatial operations.
-# MAGIC 4. **Exit Condition**: If the script is not running in the development workspace, it safely exits without executing the processing function.
-# MAGIC
-# MAGIC ### Key Concepts:
-# MAGIC - **Shapefile Processing**: Conversion of vector data (country boundaries) into a Delta table format for downstream analysis.
-# MAGIC - **CRS Transformation**: Ensures that all geometries are standardized using EPSG 4326 for spatial compatibility.
-# MAGIC - **Workspace-Conditional Execution**: Prevents execution in non-development environments to ensure proper testing and data integrity.
-# MAGIC
 
 # COMMAND ----------
 

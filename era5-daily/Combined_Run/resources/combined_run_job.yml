@@ -1,5 +1,6 @@
 ############### The main job for combined_run ############ #### ###### ### ###
-############ ### #### #### ###### #### ### ### ####### #### ### ### #### ####
+############ ### #### #### ###### #### ### ### ####### #### ### ### #### #### ##
+######
 
 
 targets:
@@ -19,7 +20,7 @@ targets:
     run_as:
       - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"  
     presets:
-      trigger_pause_status: PAUSED  # Set to ACTIVE to enable scheduling
+      trigger_pause_status: UNPAUSED  # Set to UNPAUSED to enable scheduling
       jobs_max_concurrent_runs: 20  # Set a different limit for production if needed
       tags:
         environment: staging
@@ -28,11 +29,59 @@ targets:
 
 resources:
   jobs:
+    uber_job:
+      name: uber_job 
+
+      permissions: 
+        - service_principal_name:  "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
+          level: CAN_MANAGE   ## use CAN_MANAGE to gain access to UC cluster
+
+      tasks:
+        - task_key: run_era5_source_to_staging_job
+          run_job_task:
+            job_id: ${resources.jobs.era5_source_to_staging_job.id}  # runs staging job
+
+        - task_key: run_era5_source_to_bronze_country_boundaries_job
+          depends_on:
+            - task_key: run_era5_source_to_staging_job
+          run_job_task: 
+            job_id: ${resources.jobs.era5_source_to_bronze_country_boundaries_job.id}  # runs bronze country boundaries  
+
+        - task_key: run_era5_staging_to_bronze_interpolation_job
+          depends_on:
+            - task_key: run_era5_source_to_bronze_country_boundaries_job
+          run_job_task: 
+            job_id: ${resources.jobs.era5_staging_to_bronze_interpolation_job.id}  # runs bronze interpolation job
+
+        - task_key: run_era5_bronze_to_silver_country_indices_job
+          depends_on:
+            - task_key: run_era5_staging_to_bronze_interpolation_job
+          run_job_task: 
+            job_id: ${resources.jobs.era5_bronze_to_silver_country_indices_job.id}  # runs country indices job 
+
+        - task_key: run_era5_bronze_to_silver_approximate_join_job
+          depends_on:
+            - task_key: run_era5_bronze_to_silver_country_indices_job
+          run_job_task: 
+            job_id: ${resources.jobs.era5_bronze_to_silver_approximate_join_job.id}  # runs approximate join job
+
+        - task_key: run_era5_bronze_to_silver_strict_join_job
+          depends_on:
+            - task_key: run_era5_bronze_to_silver_approximate_join_job
+          run_job_task: 
+            job_id: ${resources.jobs.era5_bronze_to_silver_strict_join_job.id}  # runs approximate join job
+            
+          
+
+
+
     era5_source_to_staging_job:
       name: era5_source_to_staging_job
+
       permissions:
         - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
           level: CAN_MANAGE   ## use CAN_MANAGE to gain access to UC cluster
+          
       tasks:
         - task_key: unit_tests_task
           job_cluster_key: era5_source_to_staging  # job cluster key
@@ -73,13 +122,13 @@ resources:
 
     era5_source_to_bronze_country_boundaries_job:
       name: era5_source_to_bronze_country_boundaries_job
-      depends_on: 
-        - era5_source_to_staging_job  # Depends on the previous job
+        
       permissions:
         - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
           level: CAN_MANAGE   ## use CAN_MANAGE to gain access to UC cluster
 
       tasks:
+        
         - task_key: unit_tests_task
           job_cluster_key: era5_country_boundaries
           notebook_task:
@@ -112,23 +161,24 @@ resources:
 
     era5_staging_to_bronze_interpolation_job:
       name: era5_staging_to_bronze_interpolation_job
-      depends_on: 
-        - era5_source_to_bronze_country_boundaries_job  # Depends on the previous job
+      
 
       permissions:
         - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
           level: CAN_MANAGE   ## use CAN_MANAGE to gain access to UC cluster
 
       tasks:
+
         - task_key: unit_tests_task
-          job_cluster_key: era5_staging_to_bronze_interpolation  # Updated job cluster key
+          job_cluster_key: era5_staging_to_bronze_interpolation  # job cluster key
           notebook_task:
             notebook_path: ../tests/02_Staging_to_Bronze/staging-to-bronze-run-unit-test.py
-
+            
+        
         - task_key: run_on_sample_task
           depends_on:
             - task_key: unit_tests_task
-          job_cluster_key: era5_staging_to_bronze_interpolation  # Updated job cluster key
+          job_cluster_key: era5_staging_to_bronze_interpolation  # job cluster key
           notebook_task:
             notebook_path: ../src/02_Staging_to_Bronze/02_Staging_to_Bronze.py
 
@@ -173,8 +223,7 @@ resources:
 
     era5_bronze_to_silver_country_indices_job:
       name: era5_bronze_to_silver_country_indices_job
-      depends_on: 
-        - era5_staging_to_bronze_interpolation_job  # Depends on the previous job 
+      
 
       permissions:
         - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
@@ -262,7 +311,7 @@ resources:
           level: CAN_MANAGE   ## use CAN_MANAGE to gain access to UC cluster
 
       tasks:
-        - task_key: unit_tests_task
+        - task_key: unit_tests_task 
           job_cluster_key: era5_approximate_join  # job cluster key
           notebook_task:
             notebook_path: ../tests/03_Bronze_to_Silver_Approximate_Join/bronze-to-silver-approximate-join-run-unit-test.py
@@ -308,8 +357,7 @@ resources:
         - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
           level: CAN_MANAGE   ## use CAN_MANAGE to gain access to UC cluster
       
-      depends_on: 
-        - era5_bronze_to_silver_approximate_join_job  # Depends on the previous job
+  
 
       tasks:
         - task_key: unit_tests_task

@@ -1,35 +1,12 @@
 # Databricks notebook source
-from pyspark.sql import SparkSession
-
-
-
-# Get the current workspace URL
-workspace_url = SparkSession.builder.getOrCreate().conf.get("spark.databricks.workspaceUrl", None)
-
-# Dev workspace URL
-dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com" 
-
-staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
-
-# COMMAND ----------
-
-if workspace_url == dev_workspace_url:
-  ## Skip the rest of the notebook
-  dbutils.notebook.exit("Skipping this code.")
-elif workspace_url == staging_workspace_url:
-  ## Skip the rest of the notebook
-  dbutils.notebook.exit("Skipping this code.")
-else: 
-  print("Not skipping this code")
-
-
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### Notebook Overview
 # MAGIC
-# MAGIC This notebook is responsible for checking the completeness of the date range in the ERA5 bronze-tier dataset. It identifies whether there are any missing dates within the dataset and outputs the results.
+# MAGIC This notebook is responsible for checking the completeness of the date range in the ERA5 bronze-tier dataset. It identifies whether there are any missing dates within the dataset and outputs the results. 
+# MAGIC
+# MAGIC __Authors:__ Sambadi Majumder | __Maintained:__ Sambadi Majumder |__Last Modified:__ 12/12/2024
+# MAGIC
+# MAGIC ---
 # MAGIC
 # MAGIC #### Key Components:
 # MAGIC

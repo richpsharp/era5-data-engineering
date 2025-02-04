@@ -1,4 +1,13 @@
 # Databricks notebook source
+# MAGIC %md
+# MAGIC ## Checking if the silver table exists
+# MAGIC
+# MAGIC **If it does then do not run the rest of the code** 
+# MAGIC
+# MAGIC **If it does then run the code**
+
+# COMMAND ----------
+
 from pyspark.sql import SparkSession
 
 
@@ -11,15 +20,6 @@ dev_workspace_url = "dbc-ad3d47af-affb.cloud.databricks.com"
 
 # Staging workspace URL
 staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Checking if the silver table exists
-# MAGIC
-# MAGIC **If it does then do not run the rest of the code** 
-# MAGIC
-# MAGIC **If it does then run the code**
 
 # COMMAND ----------
 

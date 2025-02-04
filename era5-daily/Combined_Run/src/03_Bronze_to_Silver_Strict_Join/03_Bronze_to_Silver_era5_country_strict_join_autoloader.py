@@ -1,9 +1,43 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC **This notebook for the streaming "approximate" country join differs from notebook for the streaming "strict" country join in both the join condition and the update logic.**
+# MAGIC ### Notebook Overview
 # MAGIC
-# MAGIC - *Join condition*: For the approximate join, we only join on the grid_index, not checking strict inclusion of an ERA5 point in a country chip.
-# MAGIC - *Update logic*: The updates to in this case has multiple records for each key of (latitude, longitude, time), e.g. along country boundaries, so the MERGE whenMatched... logic becomes ambiguous. In this case, we accomplish updates by deleting any matching records first, and then inserting all new or updated records.
+# MAGIC This notebook is responsible for performing a streaming "strict" country join of ERA5 data from the bronze-tier Delta table to the silver tier. The process involves geospatial transformations with precise spatial inclusion checks and efficient updates using Databricks Delta Lake's capabilities.
+# MAGIC
+# MAGIC __Authors:__ Harlan Kadish | __Maintained:__ Sambadi Majumder | __Last Modified:__ 12/12/2024
+# MAGIC
+# MAGIC ---
+# MAGIC
+# MAGIC #### Key Components:
+# MAGIC - **Join Condition Logic**:  
+# MAGIC   The notebook implements a strict join where ERA5 points are matched to country data based on:
+# MAGIC   - Matching `grid_index`.
+# MAGIC   - Validating that ERA5 points are either strictly within a cell that is entirely in a country or within a chip of a cell that is inside the country, using `st_contains`.
+# MAGIC
+# MAGIC - **Update Logic**:  
+# MAGIC      A straightforward MERGE statement, with the usual sequencing
+# MAGIC  
+# MAGIC   
+# MAGIC
+# MAGIC - **Data Processing Pipeline**:  
+# MAGIC   The ingestion process reads streaming ERA5 data and applies geospatial transformations using H3 indexing and Databricks Mosaic functions to enrich the data with precise country information.
+# MAGIC
+# MAGIC - **Geospatial Enrichment**:  
+# MAGIC   ERA5 data is enriched with strict country information, enabling high-precision downstream analytics while adhering to strict spatial containment logic.
+# MAGIC
+# MAGIC This notebook ensures the incremental movement of enriched ERA5 data to the silver tier with strict join logic and robust update mechanisms to maintain high data accuracy and consistency.
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #IMPORTANT NOTE
+# MAGIC
+# MAGIC **This notebook for the streaming "strict" country join differs from notebook for the streaming "approximate" country join in both the join condition and the update logic.**
+# MAGIC
+# MAGIC - *Join condition*: For the strict join, we check the strict inclusion of an ERA5 point in a country chip. We achieve this by first checking if the point is in a cell that is definitely inside the country (i.e. "core") or the point is in a chip of a cell that is inside the country. Because most cells are core and most chips are small, this approach out-performs a simple containment check for each point and polygon.
+# MAGIC - *Update logic*:  Because the incoming "changeset" of records includes just one record for each (lat, lon, time) combination, it suffices to use a straightforward MERGE statement, with the usual sequencing.
+# MAGIC
 
 # COMMAND ----------
 
@@ -13,9 +47,12 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Installation of the Databricks Mosaic Library
+# MAGIC ### Installing Required Libraries
 # MAGIC
-# MAGIC This section involves the installation of the `databricks-mosaic` library, which is specifically designed to enhance the capabilities of Databricks for handling and analyzing geospatial data. The Mosaic library provides advanced geospatial functionality, enabling users to perform sophisticated spatial operations, spatial indexing, and seamless integration with other Databricks features. By installing this library, the notebook equips itself with the tools necessary to tackle complex geospatial tasks within the Databricks environment.
+# MAGIC This section installs the necessary Python libraries for handling NetCDF files and multidimensional arrays. The specific version of `numpy` (1.26.4) is required to avoid compatibility issues, and the latest version should not be used as it may cause the notebook to crash.
+# MAGIC
+# MAGIC - **`numpy`**: Used for handling large, multidimensional arrays and matrices.
+# MAGIC - **`databricks-mosaic`**: A library for advanced geospatial operations in Databricks environments, including spatial indexing and point-in-polygon queries.
 
 # COMMAND ----------
 
@@ -37,21 +74,39 @@ dbutils.library.restartPython()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Importing Libraries and Initializing Mosaic for Geospatial Analysis
+# MAGIC ### Importing Libraries and Initializing Functions for Data Analysis and Geospatial Operations
 # MAGIC
-# MAGIC This section of the notebook imports several essential libraries and modules necessary for advanced data manipulation, geospatial analysis, and handling of Delta tables within a PySpark environment.
+# MAGIC This section of the notebook imports several key libraries and modules essential for data manipulation, geospatial operations, and managing Delta tables in a PySpark environment.
 # MAGIC
-# MAGIC #### Imports:
-# MAGIC - **pyspark.sql.functions**: Provides a variety of functions to manipulate columns of a DataFrame. This includes `col`, `lit`, `when`, `desc`, and `row_number` for column referencing, literal values, conditional statements, sorting, and creating a row number respectively.
-# MAGIC - **pyspark.databricks.sql.functions**: Imports Databricks-specific SQL functions like `h3_longlatash3`, which converts longitude and latitude coordinates into hierarchical hexagonal spatial index (H3) values.
-# MAGIC - **delta.tables.DeltaTable**: Facilitates operations on Delta tables, which allow for ACID transactions and scalable metadata handling in Spark.
-# MAGIC - **pyspark.sql.window.Window**: Enables the definition of window frames for operations over rows of a DataFrame based on certain ordering or partitioning criteria.
+# MAGIC ### Imports:
+# MAGIC  - **`pyspark.sql.SparkSession`**: Provides an entry point to programming with Spark with functionalities for managing sessions and Spark configurations.
 # MAGIC
-# MAGIC #### Mosaic Initialization: 
-# MAGIC - **mosaic (imported as mos)**: The `mosaic` module from the `databricks-mosaic` library is imported to leverage advanced geospatial functionalities within Databricks.
-# MAGIC - **mos.enable_mosaic(spark, dbutils)**: This function call initializes the Mosaic library, integrating it with the current Spark session and dbutils, enabling advanced geospatial functionalities within the Databricks environment. 
+# MAGIC  - **`pyspark.sql.functions`**: A collection of built-in functions to perform columnar operations on DataFrames:
+# MAGIC    - **`col`**: Refers to a specific column by name in a DataFrame.
+# MAGIC    - **`lit`**: Creates a column with a constant value.
+# MAGIC    - **`when`**: Enables conditional logic for column values.
+# MAGIC    - **`desc`**: Sorts column values in descending order.
+# MAGIC    - **`row_number`**: Assigns unique row numbers within a partitioned and ordered window.
 # MAGIC
-# MAGIC By setting up these libraries and initializing Mosaic, the notebook is well-prepared to handle complex geospatial datasets, perform spatial queries, and efficiently manage Delta tables for scalable data processing tasks.
+# MAGIC  - **`pyspark.databricks.sql.functions`**: Includes Databricks-specific SQL functions:
+# MAGIC    - **`h3_longlatash3`**: Converts longitude and latitude into H3 hierarchical hexagonal spatial index values, useful for geospatial analysis.
+# MAGIC
+# MAGIC  - **`delta.tables.DeltaTable`**: Supports operations on Delta tables, enabling ACID transactions, time travel, and scalable metadata management in a Spark environment.
+# MAGIC    - **ACID Transactions:**
+# MAGIC      - **Atomicity**: Ensures that each transaction is treated as a single unit of operation. Either all changes within the transaction are applied, or none of them are, even in the event of a failure.
+# MAGIC      - **Consistency**: Guarantees that the database transitions from one valid state to another, maintaining data integrity. For example, schema constraints are respected during updates.
+# MAGIC      - **Isolation**: Ensures that concurrent transactions do not interfere with each other, maintaining the illusion that each transaction runs independently.
+# MAGIC      - **Durability**: Ensures that once a transaction is committed, its effects are permanently recorded, even in the face of system failures.
+# MAGIC    - Delta Lake leverages ACID transactions to ensure:
+# MAGIC      - Reliable and correct data processing.
+# MAGIC      - Prevention of partial writes or inconsistencies during updates.
+# MAGIC      - Compatibility with high-concurrency workloads in big data environments.
+# MAGIC
+# MAGIC  - **`pyspark.sql.window.Window`**: Defines window specifications for advanced analytics on DataFrames, enabling operations like ranking, running totals, and lag/lead analysis within a specific partition or ordered dataset.
+# MAGIC
+# MAGIC  - **`mosaic` (imported as `mos`)**: A library providing advanced geospatial functionalities within the Databricks environment:
+# MAGIC    - **`mos.enable_mosaic(spark, dbutils)`**: Initializes Mosaic, integrating it with the current Spark session and dbutils. This enables advanced geospatial queries, spatial indexing, and manipulation of complex geospatial datasets.
+# MAGIC
 
 # COMMAND ----------
 
@@ -75,7 +130,9 @@ mos.enable_mosaic(spark, dbutils)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC **The shuffle partitions below are tuned for one year of data. We could probably use fewer for a one-day increment.**
+# MAGIC **The shuffle partitions below are tuned for one year of data. We could probably use fewer for a one-day increment. Note that this setting is like a fall-back. Spark usually makes a more informed partitioning choice automatically.**
+# MAGIC
+# MAGIC For geospatial data, we often disable coalescePartitions to maintain smaller partitions, even if there are many of them.
 
 # COMMAND ----------
 
@@ -103,7 +160,7 @@ spark.conf.set("spark.sql.shuffle.partitions", 200)                 # <-- defaul
 # MAGIC   - It reads the country index table, which contains precomputed `grid_index` values and boundary information (e.g., `chip_is_core` and `chip_wkb`).
 # MAGIC
 # MAGIC - **Join Condition**:
-# MAGIC   - The join condition first checks if the H3 `grid_index` of the ERA5 record matches that of the country boundary. It then further refines the check by ensuring the point is either inside the core of the country cell or inside the boundary chip using `st_contains`.
+# MAGIC   - The join condition first checks if the H3 `grid_index` of the ERA5 record matches that of the country boundary. It then further refines the check by ensuring the point is either inside the core of the country cell or inside the boundary chip using `st_contains`. Because most cells are core and most chips are small, this approach out-performs a simple containment check for each point and polygon.
 # MAGIC
 # MAGIC - **Output**:
 # MAGIC   - The function returns a dataframe with ERA5 records joined with corresponding country information. The columns `country_strict` and `country_chip_wkb` hold the country and chip boundary data for each record.
@@ -178,7 +235,7 @@ def bronze_to_silver_era5_country_strict_autoloader(bronze_era5_table,country_in
 # MAGIC
 # MAGIC - **Input Parameters**:
 # MAGIC   - `changeset_df`: The dataframe containing new ERA5 records or changes.
-# MAGIC   - `batch_id`: The batch identifier for the streaming job (used in the `foreachBatch` operation).
+# MAGIC   - `batch_id`: The batch identifier for the streaming job (used in the `foreachBatch` operation). Helps with restarting the stream where it left off after a failure.
 # MAGIC
 # MAGIC - **Window for Latest Records**:
 # MAGIC   - The function defines a window to partition the data by the `silver_merge_keys` (e.g., `time`, `latitude`, `longitude`) and `country`, ordering by the `sequence_col` in descending order. This allows it to select the most recent record for each unique combination of keys.
@@ -201,27 +258,38 @@ def bronze_to_silver_era5_country_strict_autoloader(bronze_era5_table,country_in
 ### DEFINING A FUNCTION HERE TO AVOID SPARK NOT DEFINED ERROR
 ################
 
-
 def merge_era5_with_silver(changeset_df, batch_id):
-    # To ensure we apply only the latest updates in a batch,
-    # for each key, we choose the record with the latest sequence value.
-    # Note that null sequence values sort last with ORDER BY ... DESC
+    # Define a window specification to partition data by the silver merge keys
+    # and order rows within each partition by the sequence column in descending order.
+    # This ensures we can identify the latest update for each key.
     window = Window.partitionBy(silver_merge_keys).orderBy(desc(sequence_col))
+
+    # Add a row number column to the DataFrame based on the defined window,
+    # keeping only the latest record (row_num = 1) for each key.
     changeset_latest = (
-        changeset_df.withColumn("row_num", row_number().over(window))
-        .filter("row_num = 1")
-        .drop("row_num")
+        changeset_df.withColumn("row_num", row_number().over(window))  # Add row numbers based on the window.
+        .filter("row_num = 1")  # Keep only the first row for each partition (latest update).
+        .drop("row_num")  # Drop the helper row_num column after filtering.
     )
-    # To prevent out-of-order processing, we update only if the sequence
-    # value of the incoming record is greater than the existing record.
-    deltaSilverTable = DeltaTable.forName(spark, target_silver_table)    
+
+    # Load the target Delta table for merging updates.
+    deltaSilverTable = DeltaTable.forName(spark, target_silver_table)
+
+    # Merge the changeset DataFrame (latest updates) into the Delta table.
+    # Alias the Delta table as "t" (target) and the changeset DataFrame as "c" (changeset).
     deltaSilverTable.alias("t").merge(
-        changeset_df.alias("c"),
-        silver_merge_condition) \
-    .whenMatchedUpdateAll(
-        f"t.{sequence_col} IS NULL OR c.{sequence_col} > t.{sequence_col}") \
-    .whenNotMatchedInsertAll() \
-    .execute()
+        changeset_latest.alias("c"),  # Perform the merge operation using the latest changeset DataFrame.
+        silver_merge_condition  # Specify the condition for matching rows between the Delta table and changeset.
+    ) \
+    .whenMatchedUpdateAll(  # Update existing records in the Delta table when a match is found.
+        # Update the record only if:
+        # - The existing sequence value in the Delta table is NULL (indicating no valid data), OR
+        # - The sequence value in the incoming record is greater than the existing sequence value.
+        f"t.{sequence_col} IS NULL OR c.{sequence_col} > t.{sequence_col}"
+    ) \
+    .whenNotMatchedInsertAll()  # Insert all records from the changeset that do not have a match in the Delta table.
+    .execute()  # Execute the merge operation.
+
 
 
 # COMMAND ----------
@@ -272,9 +340,9 @@ staging_workspace_url = "dbc-59ffb06d-e490.cloud.databricks.com"
 if workspace_url == dev_workspace_url:
     # Set the parameters for the dev workspace
     bronze_era5_table = "`era5-daily-data`.bronze_dev.aer_era5_bronze_1950_to_present_dev_interpolation"
-    target_silver_table = "`era5-daily-data`.silver_dev.aer_era5_silver_strict_1950_to_present_dev_interpolation"
+    target_silver_table = "`era5-daily-data`.silver_dev.aer_era5_silver_strict_1950_to_present_dev_interpolation_res5"
     country_index_table = "`era5-daily-data`.silver_dev.esri_worldcountryboundaries_global_silver"
-    checkpoint = "/Volumes/era5-daily-data/silver_dev/checkpoints/era5_silver_country_strict_dev"
+    checkpoint = "/Volumes/era5-daily-data/silver_dev/checkpoints/era5_silver_country_strict_dev_res5"
 
     ### Latitude column of the bronze table
     lat_col = "latitude"
@@ -292,7 +360,7 @@ if workspace_url == dev_workspace_url:
     silver_merge_keys = ["time", lat_col, lon_col]
 
 
-    # require some help accurately documenting this
+    # The merge operation requires a SQL-like condition to match incoming records with records in the target table. The lines below use base-Python functions to construct a merge condition string from the list of merge keys.
     # E.g. "t.time = c.time and t.latitude = c.latitude and t.longitude = c.longitude"
     silver_merge_condition = (" and ").join(
         [f"t.{column} = c.{column}"
@@ -310,6 +378,7 @@ if workspace_url == dev_workspace_url:
     )
 
     ## schema of the silver table ## create it if it doesn't exist
+    ## CLUSTER BY specifies Liquid Clustering columns, which arranges the data so that queries, joins, and merges on these columns are faster.
     spark.sql(f"""
         CREATE TABLE IF NOT EXISTS {target_silver_table} (
             time TIMESTAMP,
@@ -335,13 +404,13 @@ if workspace_url == dev_workspace_url:
     # Write the stream into the table with merge and schema evolution
     write_stream = (era5_changeset
     .writeStream
-    .foreachBatch(merge_era5_with_silver)
-    .trigger(availableNow=True)
+    .foreachBatch(merge_era5_with_silver) # Allows complex write logic, like MERGE
+    .trigger(availableNow=True) # Process all of the new records since the last run
     .option("checkpointLocation", checkpoint)
     .outputMode("update")
     .start()
     )
-    write_stream.awaitTermination()
+    write_stream.awaitTermination() # Pauses execution of the rest of the notebook until the write is done.
 
     print("Function executed in the dev workspace on a small subset of the data.") 
 
@@ -362,14 +431,16 @@ elif workspace_url == staging_workspace_url:
     ## tessellation resolution
     target_resolution = 5
 
-    ### sequence column 
+    ### sequence column for finding latest records, in case they're read out-of-order
     sequence_col = "date_created"
 
     # These are the columns that uniquely identify a record in the Silver table so we can find it and update it with revisions.
     silver_merge_keys = ["time", lat_col, lon_col]
 
 
-    # require some help accurately documenting this
+    # Constuct a string, like a join condition, that describes how to match
+    # incoming records with existing records. MERGE requires this.
+    # This is just base Python string construction, here.
     # E.g. "t.time = c.time and t.latitude = c.latitude and t.longitude = c.longitude"
     silver_merge_condition = (" and ").join(
         [f"t.{column} = c.{column}"
@@ -410,6 +481,7 @@ elif workspace_url == staging_workspace_url:
     """)
 
     # Write the stream into the table with merge and schema evolution
+    # See comments on the similar function above.
     write_stream = (era5_changeset
     .writeStream
     .foreachBatch(merge_era5_with_silver)
