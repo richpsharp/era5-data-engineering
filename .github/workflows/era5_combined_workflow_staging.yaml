@@ -1,6 +1,4 @@
-## Combined ERA5 Workflow for staging #####
-
-name: "Combined ERA5 Workflow"
+name: "Deploy and Run Combined ERA5 Workflow"
 
 on:
   pull_request:
@@ -11,250 +9,33 @@ on:
       - staging
 
 jobs:
-  # Job 1: era5_source_to_staging_job
-  deploy_era5_source_to_staging:
-    name: "Deploy era5_source_to_staging_job"
+  deploy_and_run_combined_job:
+    name: "Deploy and Run Combined ERA5 Jobs"
     runs-on: ubuntu-latest
-    
 
     steps:
-      # Check out this repo, so that this workflow can access it.
+      # Step 1: Check out the repository
       - uses: actions/checkout@v3
-      # Download the Databricks CLI.
-      # See https://github.com/databricks/setup-cli
-      - uses: databricks/setup-cli@main
-      
 
-      - run: databricks bundle deploy -t staging
+      # Step 2: Set up the Databricks CLI
+      - uses: databricks/setup-cli@main
+
+      # Step 3: Deploy the Databricks Bundle
+      - name: Deploy Databricks Bundle
         working-directory: ./era5-daily/Combined_Run
+        run: |
+          databricks bundle deploy
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
-  run_era5_source_to_staging:
-    name: "Run era5_source_to_staging_job"
-    runs-on: ubuntu-latest
-    
-    needs:
-      - deploy_era5_source_to_staging
-
-    steps:
-      - uses: actions/checkout@v3
-      # Download the Databricks CLI.
-      # See https://github.com/databricks/setup-cli
-      - uses: databricks/setup-cli@main
-      
-
-      - run: databricks bundle run -t staging era5_source_to_staging_job --refresh-all
+      # Step 4: Run the Job Using Databricks Bundle Command
+      - name: Run the Deployed Job Without Tracking
         working-directory: ./era5-daily/Combined_Run
+        run: |
+          databricks bundle run uber_job --no-wait
         env:
-           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }} 
-
-
-  # Job 2: era5_source_to_bronze_country_boundaries_job
-  deploy_era5_source_to_bronze_country_boundaries:
-    name: "Deploy era5_source_to_bronze_country_boundaries_job"
-    runs-on: ubuntu-latest
-    
-    needs:
-      - run_era5_source_to_staging
-
-    steps:
-      - uses: actions/checkout@v3
-      # Download the Databricks CLI.
-      # See https://github.com/databricks/setup-cli
-      - uses: databricks/setup-cli@main
-
-      - run: databricks bundle deploy -t staging
-        working-directory: ./era5-daily/Combined_Run
-        env:
-           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
-
-  run_era5_source_to_bronze_country_boundaries:
-    name: "Run era5_source_to_bronze_country_boundaries_job"
-    runs-on: ubuntu-latest
-   
-    needs:
-      - deploy_era5_source_to_bronze_country_boundaries
-
-    steps:
-      - uses: actions/checkout@v3
-      # Download the Databricks CLI.
-      # See https://github.com/databricks/setup-cli
-      - uses: databricks/setup-cli@main
-
-      - run: databricks bundle run -t staging era5_source_to_bronze_country_boundaries_job --refresh-all
-        working-directory: ./era5-daily/Combined_Run
-        env:
-           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
-
-  # Job 3: era5_staging_to_bronze_interpolation_job
-  deploy_era5_staging_to_bronze_interpolation:
-    name: "Deploy era5_staging_to_bronze_interpolation_job"
-    runs-on: ubuntu-latest
-    
-    needs:
-      - run_era5_source_to_bronze_country_boundaries
-
-    steps:
-      - uses: actions/checkout@v3
-      # Download the Databricks CLI.
-      # See https://github.com/databricks/setup-cli
-      - uses: databricks/setup-cli@main
-
-      - run: databricks bundle deploy -t staging
-        working-directory: ./era5-daily/Combined_Run
-        env:
-           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
-
-  run_era5_staging_to_bronze_interpolation:
-    name: "Run era5_staging_to_bronze_interpolation_job"
-    runs-on: ubuntu-latest
-    
-    needs:
-      - deploy_era5_staging_to_bronze_interpolation
-
-    steps:
-      - uses: actions/checkout@v3
-      # Download the Databricks CLI.
-      # See https://github.com/databricks/setup-cli
-      - uses: databricks/setup-cli@main
-
-      - run: databricks bundle run -t staging era5_staging_to_bronze_interpolation_job --refresh-all
-        working-directory: ./era5-daily/Combined_Run
-        env:
-           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
-
-  # Job 4: era5_bronze_to_silver_country_indices_job
-  deploy_era5_bronze_to_silver_country_indices:
-    name: "Deploy era5_bronze_to_silver_country_indices_job"
-    runs-on: ubuntu-latest
-   
-    needs:
-      - run_era5_staging_to_bronze_interpolation
-
-    steps:
-      - uses: actions/checkout@v3
-      # Download the Databricks CLI.
-      # See https://github.com/databricks/setup-cli
-      - uses: databricks/setup-cli@main
-
-      - run: databricks bundle deploy -t staging
-        working-directory: ./era5-daily/Combined_Run
-        env:
-           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
-
-  run_era5_bronze_to_silver_country_indices:
-    name: "Run era5_bronze_to_silver_country_indices_job"
-    runs-on: ubuntu-latest
-    
-    needs:
-      - deploy_era5_bronze_to_silver_country_indices
-
-    steps:
-      - uses: actions/checkout@v3
-      # Download the Databricks CLI.
-      # See https://github.com/databricks/setup-cli
-      - uses: databricks/setup-cli@main
-
-      - run: databricks bundle run -t staging era5_bronze_to_silver_country_indices_job --refresh-all
-        working-directory: ./era5-daily/Combined_Run
-        env:
-           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
-
-  # Job 5: era5_bronze_to_silver_approximate_join_job
-  deploy_era5_bronze_to_silver_approximate_join:
-    name: "Deploy era5_bronze_to_silver_approximate_join_job"
-    runs-on: ubuntu-latest
-    
-    needs:
-      - run_era5_bronze_to_silver_country_indices
-
-    steps:
-      - uses: actions/checkout@v3
-      # Download the Databricks CLI.
-      # See https://github.com/databricks/setup-cli
-      - uses: databricks/setup-cli@main
-
-      - run: databricks bundle deploy -t staging
-        working-directory: ./era5-daily/Combined_Run
-        env:
-           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
-
-  run_era5_bronze_to_silver_approximate_join:
-    name: "Run era5_bronze_to_silver_approximate_join_job"
-    runs-on: ubuntu-latest
-    
-    needs:
-      - deploy_era5_bronze_to_silver_approximate_join
-
-    steps:
-      - uses: actions/checkout@v3
-      # Download the Databricks CLI.
-      # See https://github.com/databricks/setup-cli
-      - uses: databricks/setup-cli@main
-
-      - run: databricks bundle run -t staging era5_bronze_to_silver_approximate_join_job --refresh-all
-        working-directory: ./era5-daily/Combined_Run
-        env:
-           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
-
-  # Job 6: era5_bronze_to_silver_strict_join_job
-  deploy_era5_bronze_to_silver_strict_join:
-    name: "Deploy era5_bronze_to_silver_strict_join_job"
-    runs-on: ubuntu-latest
-    
-    needs:
-      - run_era5_bronze_to_silver_approximate_join
-
-    steps:
-      - uses: actions/checkout@v3
-      # Download the Databricks CLI.
-      # See https://github.com/databricks/setup-cli
-      - uses: databricks/setup-cli@main
-
-      - run: databricks bundle deploy -t staging
-        working-directory: ./era5-daily/Combined_Run
-        env:
-           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
-
-  run_era5_bronze_to_silver_strict_join:
-    name: "Run era5_bronze_to_silver_strict_join_job"
-    runs-on: ubuntu-latest
-    
-    needs:
-      - deploy_era5_bronze_to_silver_strict_join
-
-    steps:
-      - uses: actions/checkout@v3
-      # Download the Databricks CLI.
-      # See https://github.com/databricks/setup-cli
-      - uses: databricks/setup-cli@main
-
-      - run: databricks bundle run -t staging era5_bronze_to_silver_strict_join_job --refresh-all
-        working-directory: ./era5-daily/Combined_Run
-        env:
-           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
-           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
