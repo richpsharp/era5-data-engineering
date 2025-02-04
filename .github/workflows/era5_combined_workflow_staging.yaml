@@ -1,0 +1,41 @@
+name: "Deploy and Run Combined ERA5 Workflow"
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+    branches:
+      - staging
+
+jobs:
+  deploy_and_run_combined_job:
+    name: "Deploy and Run Combined ERA5 Jobs"
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the repository
+      - uses: actions/checkout@v3
+
+      # Step 2: Set up the Databricks CLI
+      - uses: databricks/setup-cli@main
+
+      # Step 3: Deploy the Databricks Bundle
+      - name: Deploy Databricks Bundle
+        working-directory: ./era5-daily/Combined_Run
+        run: |
+          databricks bundle deploy
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+
+      # Step 4: Run the Job Using Databricks Bundle Command
+      - name: Run the Deployed Job Without Tracking
+        working-directory: ./era5-daily/Combined_Run
+        run: |
+          databricks bundle run uber_job --no-wait
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
