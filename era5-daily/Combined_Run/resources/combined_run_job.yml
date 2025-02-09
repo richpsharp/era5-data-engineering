@@ -20,7 +20,8 @@ targets:
     run_as:
       - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"  
     presets:
-      trigger_pause_status: PAUSED  # Set to UNPAUSED to enable scheduling
+      trigger_pause_status: PAUSED  ## Set to UNPAUSED to enable scheduling
+      
       jobs_max_concurrent_runs: 20  # Set a different limit for production if needed
       tags:
         environment: staging
