@@ -34,7 +34,7 @@ jobs:
       - name: Run the Deployed Job Without Tracking
         working-directory: ./era5-daily/Combined_Run
         run: |
-          databricks bundle run uber_job --no-wait
+          databricks bundle run uber_job --no-wait -t staging
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_STAGING }}
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
