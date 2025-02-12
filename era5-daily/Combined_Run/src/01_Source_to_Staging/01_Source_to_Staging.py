@@ -204,10 +204,10 @@ if workspace_url == dev_workspace_url:
     # Define the schema (if needed for initial creation)
     table_schema = StructType([
         StructField("date_updated", DateType(), True),
-        StructField("date_created", DateType(), True),
         StructField("source_file", StringType(), True),
         StructField("Source_File_Path", StringType(), True),
-        StructField("date_modified_in_s3", TimestampType(), True)
+        StructField("date_modified_in_s3", TimestampType(), True),
+        StructField("date_created", DateType(), True),
     ])
 
     # Check if the Delta table already exists
@@ -244,10 +244,10 @@ elif workspace_url == staging_workspace_url:
     # Define the schema (if needed for initial creation)
     table_schema = StructType([
         StructField("date_updated", DateType(), True),
-        StructField("date_created", DateType(), True),
         StructField("source_file", StringType(), True),
         StructField("Source_File_Path", StringType(), True),
-        StructField("date_modified_in_s3", TimestampType(), True)
+        StructField("date_modified_in_s3", TimestampType(), True),
+        StructField("date_created", DateType(), True)
     ])
 
     # Check if the Delta table already exists
@@ -309,8 +309,8 @@ if workspace_url == dev_workspace_url:
     target_folder = '/Volumes/era5-daily-data/bronze_dev/era5_gwsc_staging_folder'
     table_name="`era5-daily-data`.bronze_dev.era5_inventory_table"
     
-    start_date = '1951-02-22'
-    end_date = '1951-06-01'
+    start_date = '2011-05-14'
+    end_date = '2011-05-17'
     source_folder = '/Volumes/aer-processed/era5/daily_summary'
     prefix = 'reanalysis-era5-sfc-daily-'
     date_pattern = '%Y-%m-%d'
