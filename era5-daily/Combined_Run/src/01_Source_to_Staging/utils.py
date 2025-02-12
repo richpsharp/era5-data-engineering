@@ -226,7 +226,7 @@ def copy_and_move_files_by_date_and_keep_inventory(spark,start_date, end_date, s
 
 
             
-            metadata = [(date_updated, date_created, filename, target_file_path, date_modified_in_s3)]
+            metadata = [(date_updated,filename, target_file_path, date_modified_in_s3, date_created)]
 
 
             # Debug metadata
