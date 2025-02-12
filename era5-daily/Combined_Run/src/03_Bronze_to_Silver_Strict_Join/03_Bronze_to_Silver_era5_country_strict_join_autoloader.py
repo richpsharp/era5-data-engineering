@@ -287,8 +287,7 @@ def merge_era5_with_silver(changeset_df, batch_id):
         # - The sequence value in the incoming record is greater than the existing sequence value.
         f"t.{sequence_col} IS NULL OR c.{sequence_col} > t.{sequence_col}"
     ) \
-    .whenNotMatchedInsertAll()  # Insert all records from the changeset that do not have a match in the Delta table.
-    .execute()  # Execute the merge operation.
+    .whenNotMatchedInsertAll().execute()  # Execute the merge operation.
 
 
 
