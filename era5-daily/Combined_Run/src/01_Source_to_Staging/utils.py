@@ -317,7 +317,7 @@ def check_netcdf_files(directory, expected_lon=1440, expected_lat=721):
             file_path = os.path.join(directory, filename)
             try:
                 # Open the NetCDF file using xarray
-                ds = xr.open_dataset(file_path)
+                ds = xr.open_dataset(file_path,decode_times=False)
                 
                 # Check the dimensions of the dataset using ds.sizes
                 lon_points = ds.sizes.get('longitude', 0)
