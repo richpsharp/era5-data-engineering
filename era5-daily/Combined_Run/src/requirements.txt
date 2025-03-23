@@ -1,0 +1,6 @@
+urllib3
+numpy
+xarray
+netcdf4
+boto3
+botocore
