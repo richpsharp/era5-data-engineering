@@ -4,3 +4,6 @@ xarray==2025.3.0
 netCDF4==1.7.2
 psutil==5.9.0
 dask==2025.3.0
+rioxarray==0.18.2
+rasterio==1.4.3
+geopandas==1.0.1
