@@ -1,4 +1,10 @@
 # Databricks notebook source
+# MAGIC %pip install rioxarray
+# MAGIC %restart_python
+
+# COMMAND ----------
+
+import rioxarray
 import matplotlib.pyplot as plt
 
 workbook_path = '/Workspace/Users/rpsharp@ua.edu/richpsharp fork -- era5-data-engineering/era5-daily/Combined_Run/src/ERA5 Monthly Normals REST'
@@ -16,16 +22,23 @@ arguments = {
     'variable': 'era5.mean_t2m_c'
 }
 
-result = dbutils.notebook.run(
+dbfs_tif_path = dbutils.notebook.run(
     workbook_path,
     0,
     arguments=arguments)
 
-result.load()
-print('Mean 2D numpy array:')
-result.plot(x='longitude', y='latitude')  # or whatever your coordinate names are
+local_tif_path = dbfs_tif_path.replace('dbfs:/', '/dbfs/')
 
+# 3) Open it as a rioxarray DataArray
+da = rioxarray.open_rasterio(local_tif_path)
+
+# 4) If it's a single-band GeoTIFF, da will have shape (band, y, x).
+#    We can just select band=0 to get a 2D array:
+da_2d = da.isel(band=0)
+
+# 5) Plot
 title = f'{arguments["variable"]} {arguments["agg_fn"]} {start_date} to {end_date}'
+da_2d.plot()
 plt.title(title)
 plt.show()
 

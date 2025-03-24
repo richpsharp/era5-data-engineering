@@ -190,4 +190,8 @@ dbutils.notebook.exit(dbfs_path)
 
 # COMMAND ----------
 
-
+import rioxarray
+da = rioxarray.open_rasterio(geotiff_path)
+da_2d = da.isel(band=0)
+da_2d.plot()
+plt.show()
