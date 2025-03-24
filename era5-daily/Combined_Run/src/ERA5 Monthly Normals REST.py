@@ -1,11 +1,10 @@
 # Databricks notebook source
-# MAGIC %pip install dask
-# MAGIC
+# MAGIC %pip install rioxarray rasterio dask
+# MAGIC %restart_python
 
 # COMMAND ----------
 
-# MAGIC %restart_python
-# MAGIC !pip list
+# MAGIC %pip list
 
 # COMMAND ----------
 
@@ -75,6 +74,7 @@ def get_inputs():
         raise ValueError('\n'.join(error_list))
     return args
 
+# COMMAND ----------
 
 import shutil
 import json
@@ -86,6 +86,7 @@ import time
 import concurrent.futures
 import psutil
 import xarray as xr
+import matplotlib.pyplot as plt
 
 ARGS = get_inputs()
 print(ARGS)
@@ -93,6 +94,8 @@ print(ARGS)
 start_date = datetime.strptime(ARGS[START_DATE], '%Y-%m-%d').date()
 end_date = datetime.strptime(ARGS[END_DATE], '%Y-%m-%d').date()
 
+if start_date > end_date:
+    raise ValueError(f'start date: {start_date} is later than end date: {end_date}')
 pattern = re.compile(r'.*(\d{4}-\d{2}-\d{2})\.nc$')
 
 def valid_date(filepath):
@@ -108,6 +111,7 @@ remote_raster_path_list = [
     p for p in 
     glob.glob(os.path.join(dataset_root_dir, '*.nc'))
     if valid_date(p)]
+print(len(remote_raster_path_list), flush=True)
         
 CACHE_DIR = f'/local_disk0/{ARGS[DATASET]}'
 
@@ -120,15 +124,6 @@ def copy_file(file_path):
             preexists = False
             
         size = os.path.getsize(target_path)
-        
-        #ds = xr.open_dataset(target_path)
-        #print(ds)
-        #ds.load()
-        #mem = psutil.virtual_memory()
-        #print(f'Memory usage: {mem.used/(1024*1024):.2f} MB used, '
-        #    f'{mem.available/(1024*1024):.2f} MB free '
-        #    f'({mem.percent:.2f}% used)', flush=True)
-        #ds.close()
         return file_path, size, preexists, None
     except Exception as exception:
         print(f'error: {exception}')
@@ -179,11 +174,20 @@ with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor
             f'Memory usage: {mem.used/(1024*1024):.2f} MB used, '
             f'{mem.available/(1024*1024):.2f} MB free '
             f'({mem.percent:.2f}% used)', flush=True)
-print('all done loading')
-
+print('all done loading, now xr opening')
 ds = xr.open_mfdataset(file_path_list, combine='by_coords')
-mean_value = ds['mean_t2m_c'].mean()
-mean_value.load()
-print(mean_value.values)
-#dbutils.notebook.exit(remote_raster_path_list)
+print('dataset opened, calculating aggregation')
+mean_2d = ds['mean_t2m_c'].mean(dim='time', skipna=True)
+
+mean_2d = mean_2d.rio.write_crs("EPSG:4326", inplace=True)
+geotiff_path = f'/tmp/{ARGS[VARIABLE]}_{ARGS[AGG_FN]}_{start_date}_to_{end_date}.tif'
+print(geotiff_path)
+mean_2d.rio.to_raster(geotiff_path)
+dbfs_path = f'dbfs:{geotiff_path}'
+dbutils.fs.cp(f'file:{geotiff_path}', dbfs_path)
+dbutils.notebook.exit(dbfs_path)
+
+
+# COMMAND ----------
+
 
