@@ -3,8 +3,9 @@ numpy==1.26.4
 xarray==2025.3.0
 netCDF4==1.7.2
 psutil==5.9.0
-dask==2025.3.0
+dask[distributed]==2025.3.0
 rioxarray==0.18.2
 rasterio==1.4.3
 geopandas==1.0.1
 shapely==2.0.7
+h5netcdf==1.6.1

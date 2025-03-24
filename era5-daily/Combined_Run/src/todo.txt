@@ -1,0 +1,27 @@
+* I learneda bout dbfs:/tmp/.... this is yet another bucket? how is it organized? Doesn't make sense to copy from one volume to the dbfs because it's just yet another bucket?
+* seems that if things are mounted to 'dbfs' we can get some parallel reads? how do i do that?
+
+* The key is getting files off the bucket to local /ssd storage
+    * bandwidth per node is based off the *number of CPUS!*
+
+* Missing ERA5 data from aer bucket:
+    1950-01-06
+    2020-01-01 through 2021-09-06
+    2021-09-08
+    2025-03-15
+
+* The key is getting files off of bucket storage locally
+    * bandwidth per node is based off the nubmer of CPUs, and the node can't share ephermeral storage from one node to another
+        * this would be a case for an ec2 rather than a databricks cluster.
+    * would like to be able to batch s3 copy from a bucket, but that is not possible
+    * for larger netcdf files, partial indexing is possible, but not without s3 access
+    * cpu spike when copying from /Volume/...
+* Made a "secrets" store: databricks secret create-scope gwsc-secrets
+    * workspace_url -- the unique workspace url
+    * workspace_token -- the token to authenticate jobs
+* Got jobs to work, not a problem
+* Copying one bucket to another
+* I think you were worried about arbitrary polygon clipping, but that's not a problem
+* Got a python notebook to "call" another notebook for a result
+    * Working on an R notebook
+* got an init script for python library startup
