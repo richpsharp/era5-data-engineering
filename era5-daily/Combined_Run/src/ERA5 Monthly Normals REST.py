@@ -1,10 +1,7 @@
 # Databricks notebook source
-# MAGIC %pip install rioxarray rasterio dask
+# MAGIC %pip install rioxarray rasterio dask geopandas shapely
 # MAGIC %restart_python
-
-# COMMAND ----------
-
-# MAGIC %pip list
+# MAGIC %pip list 
 
 # COMMAND ----------
 
@@ -20,6 +17,9 @@ AGG_FN = 'agg_fn'
 END_DATE = 'end_date'
 START_DATE = 'start_date'
 DATASET = 'dataset'
+AOI_PATH = 'aoi_path'
+AOI_FILTER = 'aoi_filter'
+
 VARIABLE = 'variable'
 
 # These are the possible aggregation functions
@@ -52,7 +52,9 @@ input_vars = [
     (END_DATE, None, 'End Date'),
     (START_DATE, None, 'Start Date'),
     (DATASET, [DEFAULT] + [d.value for d in DatasetType], 'Dataset'),
-    (VARIABLE, [DEFAULT] + [v.value for v in ERA5Variables], 'Dataset Variable')
+    (VARIABLE, [DEFAULT] + [v.value for v in ERA5Variables], 'Dataset Variable'),
+    (AOI_PATH, None, 'AOI Path'),
+    (AOI_FILTER, None, 'AOI Filter'),
 ]
 
 # Build Databricks widgets
@@ -67,6 +69,12 @@ def get_inputs():
     error_list = []
     for key, valid_list, _ in input_vars:
         args[key] = dbutils.widgets.get(key)
+        if key == AOI_PATH:
+            if args[AOI_PATH] == DEFAULT:
+                args[AOI_PATH] = None
+        if key == AOI_FILTER:
+            if args[AOI_FILTER] != DEFAULT:
+                args[AOI_FILTER] = json.loads(args[AOI_FILTER])
         if args[key] == DEFAULT or (valid_list is not None and args[key] not in valid_list):
             error_list.append(f'Please provide a value for {key}/{label}.')
 
@@ -87,6 +95,11 @@ import concurrent.futures
 import psutil
 import xarray as xr
 import matplotlib.pyplot as plt
+import geopandas as gpd
+import rioxarray
+import matplotlib.pyplot as plt
+from shapely.geometry import mapping
+
 
 ARGS = get_inputs()
 print(ARGS)
@@ -177,12 +190,34 @@ with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor
 print('all done loading, now xr opening')
 ds = xr.open_mfdataset(file_path_list, combine='by_coords')
 print('dataset opened, calculating aggregation')
-mean_2d = ds['mean_t2m_c'].mean(dim='time', skipna=True)
+result_2d = ds['mean_t2m_c'].mean(dim='time', skipna=True)
+result_2d = result_2d.rio.write_crs("EPSG:4326", inplace=True)
 
-mean_2d = mean_2d.rio.write_crs("EPSG:4326", inplace=True)
+lon_name = 'longitude'  # since we used x for longitude dimension
+
+if (result_2d[lon_name].values.min() >= 0) and (result_2d[lon_name].values.max() > 180):
+    result_2d = result_2d.assign_coords(
+        **{lon_name: ((result_2d[lon_name] + 180) % 360) - 180}
+    )
+    result_2d = result_2d.sortby(lon_name)
+
+if ARGS[AOI_PATH]:
+    gdf = gpd.read_file(ARGS[AOI_PATH])
+    for column_name, allowed_values in ARGS[AOI_FILTER].items():
+        gdf = gdf[gdf[column_name].isin(allowed_values)]
+
+    if gdf.crs != result_2d.rio.crs and result_2d.rio.crs is not None:
+        gdf = gdf.to_crs(result_2d.rio.crs)
+
+    result_2d = result_2d.rio.clip(
+        gdf.geometry.apply(mapping),
+        gdf.crs,
+        all_touched=True
+    )
+
 geotiff_path = f'/tmp/{ARGS[VARIABLE]}_{ARGS[AGG_FN]}_{start_date}_to_{end_date}.tif'
 print(geotiff_path)
-mean_2d.rio.to_raster(geotiff_path)
+result_2d.rio.to_raster(geotiff_path)
 dbfs_path = f'dbfs:{geotiff_path}'
 dbutils.fs.cp(f'file:{geotiff_path}', dbfs_path)
 dbutils.notebook.exit(dbfs_path)
