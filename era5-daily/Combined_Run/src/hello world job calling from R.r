@@ -2,9 +2,6 @@
 library(httr)
 library(jsonlite)
 
-# 1) Retrieve secrets from Databricks.
-#    WARNING: Not all R runtimes support dbutils.secrets,
-#    so if this fails, see the "Alternatives" mentioned before.
 workspace_url <- dbutils.secrets.get(scope='gwsc-secrets', key='workspace_url')
 token <- dbutils.secrets.get(scope='gwsc-secrets', key='workspace_token')
 
@@ -13,9 +10,6 @@ job_id <- 398370535700101  # Example Job ID
 # 2) Kick off the job run
 body <- list(
   job_id = job_id,
-  # If the target notebook has widgets or specific parameters, put them here:
-  # notebook_params = list(start_date = "2023-01-01", end_date = "2023-01-31")
-  # For demonstration, we're including a dummy "input"
   notebook_params = list(input='Hello from R')
 )
 
@@ -71,7 +65,7 @@ if (length(tasks_list) == 0) {
 } else {
   for (task_info in tasks_list) {
     task_run_id <- task_info$run_id
-    task_key    <- task_info$task_key  # for identification
+    task_key <- task_info$task_key 
     
     cat("\nRetrieving output for task:", task_key, "with run_id =", task_run_id, "\n")
     
