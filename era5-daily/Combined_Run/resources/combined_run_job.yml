@@ -6,8 +6,6 @@
 targets:
   dev:
     mode: development
-    run_as:
-      - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
     presets:
       trigger_pause_status: PAUSED  # Define a schedule for deployment. PAUSED means schedule is paused.
       jobs_max_concurrent_runs: 10
@@ -17,8 +15,6 @@ targets:
 
   staging:
     mode: production
-    run_as:
-      - service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"  
     presets:
       trigger_pause_status: PAUSED  ## Set to UNPAUSED to enable scheduling
       
