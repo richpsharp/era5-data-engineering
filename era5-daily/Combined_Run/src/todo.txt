@@ -25,3 +25,4 @@
 * Got a python notebook to "call" another notebook for a result
     * Working on an R notebook
 * got an init script for python library startup
+* can you walk me through a working R example for the ERA5 for the tables? I'm having trouble with permissions and such
