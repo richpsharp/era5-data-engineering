@@ -102,10 +102,6 @@ from netCDF4 import Dataset
 
 from dask.distributed import Client, LocalCluster
 
-# for the dask distributed, not's not specifically referenced bdlow
-cluster = LocalCluster(processes=True, n_workers=os.cpu_count()*2)
-client = Client(cluster)
-
 ARGS = get_inputs()
 print(ARGS)
 
@@ -147,7 +143,7 @@ def copy_file(file_path):
     except Exception as exception:
         return target_path, size, preexists, exception
 
-max_workers = os.cpu_count()*4
+max_workers = 4
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 batch_start = time.time()
@@ -208,9 +204,13 @@ def check_validity(file_path_list):
         print("No corrupt files!")
 
 print(f'xr opening sample: {file_path_list[:10]}')
+# for the dask distributed, not's not specifically referenced bdlow
+cluster = LocalCluster(processes=True, n_workers=os.cpu_count()*2)
+client = Client(cluster)
+
 ds = xr.open_mfdataset(
     file_path_list, 
-    engine='h5netcdf',
+    #engine='h5netcdf',
     combine='by_coords',
     chunks={'time': 30},
     parallel=True,
@@ -259,8 +259,3 @@ da = rioxarray.open_rasterio(geotiff_path)
 da_2d = da.isel(band=0)
 da_2d.plot()
 plt.show()
-
-# COMMAND ----------
-
-# MAGIC %pip install dask[distributed]
-# MAGIC %restart_python
