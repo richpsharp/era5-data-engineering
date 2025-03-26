@@ -1,25 +1,28 @@
 # Databricks notebook source
-# MAGIC %pip install rioxarray
-# MAGIC %restart_python
-
-# COMMAND ----------
-
+import json
+import geopandas as gpd
 import rioxarray
 import matplotlib.pyplot as plt
+from shapely.geometry import mapping
 
 workbook_path = '/Workspace/Users/rpsharp@ua.edu/richpsharp fork -- era5-data-engineering/era5-daily/Combined_Run/src/ERA5 Monthly Normals REST'
 
-start_date = '2023-01-01'
-end_date = '2023-02-01'
+start_date = '2000-01-01'
+end_date = '2014-12-31'
 dataset = 'era5'
 agg_fn = 'mean'
+variable = 'era5.mean_t2m_c'
+country_list = ['CAN', 'MEX', 'FRA']
+gpkg_path = '/Volumes/global/global_datasets/gdam_country_gpkg/countries_iso3_md5_6fb2431e911401992e6e56ddf0a9bcda.gpkg'
 
 arguments = {
     'start_date': str(start_date),
     'end_date': str(end_date),
-    'dataset': 'era5',
-    'agg_fn': 'mean',
-    'variable': 'era5.mean_t2m_c'
+    'dataset': dataset,
+    'agg_fn': agg_fn,
+    'variable': variable,
+    'aoi_path': gpkg_path,
+    'aoi_filter': json.dumps({"iso3": country_list}),
 }
 
 dbfs_tif_path = dbutils.notebook.run(
@@ -28,17 +31,21 @@ dbfs_tif_path = dbutils.notebook.run(
     arguments=arguments)
 
 local_tif_path = dbfs_tif_path.replace('dbfs:/', '/dbfs/')
-
-# 3) Open it as a rioxarray DataArray
 da = rioxarray.open_rasterio(local_tif_path)
 
-# 4) If it's a single-band GeoTIFF, da will have shape (band, y, x).
-#    We can just select band=0 to get a 2D array:
-da_2d = da.isel(band=0)
+gdf = gpd.read_file(arguments['aoi_path'])
+for column_name, allowed_values in json.loads(arguments['aoi_filter']).items():
+    gdf = gdf[gdf[column_name].isin(allowed_values)]
 
-# 5) Plot
 title = f'{arguments["variable"]} {arguments["agg_fn"]} {start_date} to {end_date}'
-da_2d.plot()
+fig, ax = plt.subplots()
+da.plot(ax=ax)
+gdf.boundary.plot(ax=ax, edgecolor='black')
 plt.title(title)
 plt.show()
 
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC
