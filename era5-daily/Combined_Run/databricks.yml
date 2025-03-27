@@ -9,6 +9,10 @@ include:
 run_as:
   service_principal_name: "19ea432a-82df-43ec-b76a-badd530f8d60"
 
+artifacts:
+  schemas:
+    path: schemas.yaml
+
 targets:
   # The 'dev' target, for development purposes. This target is the default.
   dev:
