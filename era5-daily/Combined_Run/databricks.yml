@@ -4,21 +4,15 @@ bundle:
   name: combined_run
 
 include:
-  - resources/*.yml
-
-artifacts:
-  # custom artifacts we can use to make one source of truth
-  schemas:
-    # these define the table schemas used in this DAB
-    path: schemas/schema.yaml
+  - resources/pilot_run_job.yml
 
 run_as:
-  service_principal_name: "19ea432a-82df-43ec-b76a-badd530f8d60"
+  # Service Principal names are not secret or sensitive
+  service_principal_name: "8ce1d7c0-9183-46a2-9f00-0915e5fab437"
 
 targets:
   pilot:
     mode: development
     workspace:
-      host: ${DATABRICKS_HOST}
-    environment:
-      SCHEMA_YAML_PATH: ${bundle.artifacts.schemas.path}
+      # Databricks workspace host URL is not considered sensitive information
+      host: https://dbc-ad3d47af-affb.cloud.databricks.com/
