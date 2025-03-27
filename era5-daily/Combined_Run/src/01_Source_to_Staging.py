@@ -1,3 +1,4 @@
+import config
 from config import ERA5_INVENTORY_SCHEMA_PATH
 from config import ERA5_INVENTORY_TABLE_NAME
 
