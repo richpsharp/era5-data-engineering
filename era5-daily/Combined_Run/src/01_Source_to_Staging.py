@@ -1,3 +1,4 @@
+from utils.schema_loader import load_schema
 import xarray as xr
 import os
 from datetime import datetime
@@ -504,4 +505,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    table_schema = load_schema('rs_era5_inventory_table')
+    print(table_schema)
+    # main()
