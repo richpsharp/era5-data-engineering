@@ -1,0 +1,25 @@
+tables:
+  rs_era5_inventory_table:
+    database: era5-daily-data
+    schema: bronze_dev
+    columns:
+      - name: date_updated
+        type: date
+        nullable: true
+        description: "Date when the data was last updated"
+      - name: source_file
+        type: string
+        nullable: true
+        description: "Name of source file"
+      - name: Source_File_Path
+        type: string
+        nullable: true
+        description: "Full path to source file"
+      - name: date_modified_in_s3
+        type: timestamp
+        nullable: true
+        description: "Timestamp of last modification in S3"
+      - name: date_created
+        type: date
+        nullable: true
+        description: "Original creation date"
