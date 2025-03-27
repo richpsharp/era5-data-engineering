@@ -3,11 +3,8 @@
 bundle:
   name: combined_run
 
-include:
-  - resources/pilot_run_job.yml
-
 run_as:
-  # Service Principal names are not secret or sensitive
+  # Service Principal name is not considered sensitive information
   service_principal_name: "8ce1d7c0-9183-46a2-9f00-0915e5fab437"
 
 targets:
@@ -16,3 +13,14 @@ targets:
     workspace:
       # Databricks workspace host URL is not considered sensitive information
       host: https://dbc-ad3d47af-affb.cloud.databricks.com/
+
+    resources:
+      jobs:
+        source_to_staging:
+          name: "01_Source_to_Staging"
+          tasks:
+            - task_key: run_source_to_staging
+              spark_python_task:
+                python_file: src/hello.py
+              # this is the i3.... 1 DBU/h node
+              existing_cluster_id: "0323-185451-9kdw6hmy"
