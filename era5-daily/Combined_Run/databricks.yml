@@ -6,12 +6,14 @@ bundle:
 include:
   - resources/*.yml
 
+artifacts:
+  # custom artifacts we can use to make one source of truth
+  schemas:
+    # these define the table schemas used in this DAB
+    path: schemas/schema.yaml
+
 run_as:
   service_principal_name: "19ea432a-82df-43ec-b76a-badd530f8d60"
-
-artifacts:
-  schemas:
-    path: schemas.yaml
 
 targets:
   # The 'dev' target, for development purposes. This target is the default.
@@ -24,6 +26,8 @@ targets:
     default: true
     workspace:
       host: https://dbc-ad3d47af-affb.cloud.databricks.com
+    environment:
+      SCHEMA_YAML_PATH: ${bundle.artifacts.schemas.path}
 
   # Optionally, there could be a 'staging' target here.
   # (See Databricks docs on CI/CD at https://docs.databricks.com/dev-tools/bundles/ci-cd.html.)
