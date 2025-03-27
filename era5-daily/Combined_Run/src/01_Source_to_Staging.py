@@ -331,7 +331,7 @@ def copy_and_move_files_by_date_and_keep_inventory(
     print("File processing, metadata update, and move complete.")
 
 
-def main():
+# def main():
     # delta_table_name = "`era5-daily-data`.bronze_dev.rs_era5_inventory_table"
 
     # table_schema = StructType(
