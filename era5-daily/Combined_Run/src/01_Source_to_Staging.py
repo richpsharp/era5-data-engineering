@@ -332,176 +332,176 @@ def copy_and_move_files_by_date_and_keep_inventory(
 
 
 def main():
-    delta_table_name = "`era5-daily-data`.bronze_dev.rs_era5_inventory_table"
+    # delta_table_name = "`era5-daily-data`.bronze_dev.rs_era5_inventory_table"
 
-    table_schema = StructType(
-        [
-            StructField("date_updated", DateType(), True),
-            StructField("source_file", StringType(), True),
-            StructField("Source_File_Path", StringType(), True),
-            StructField("date_modified_in_s3", TimestampType(), True),
-            StructField("date_created", DateType(), True),
-        ]
-    )
+    # table_schema = StructType(
+    #     [
+    #         StructField("date_updated", DateType(), True),
+    #         StructField("source_file", StringType(), True),
+    #         StructField("Source_File_Path", StringType(), True),
+    #         StructField("date_modified_in_s3", TimestampType(), True),
+    #         StructField("date_created", DateType(), True),
+    #     ]
+    # )
 
-        # Check if the Delta table already exists
-        if spark.catalog.tableExists(delta_table_name):
-            print(f"Delta table exists: {delta_table_name}")
+    # # Check if the Delta table already exists
+    # if spark.catalog.tableExists(delta_table_name):
+    #     print(f"Delta table exists: {delta_table_name}")
 
-            # Validate or evolve the schema to include `date_created`
-            delta_table = DeltaTable.forName(spark, delta_table_name)
-            existing_schema = delta_table.toDF().schema
-            existing_fields = {field.name for field in existing_schema.fields}
-            new_fields = {field.name for field in table_schema.fields} - existing_fields
+    #     # Validate or evolve the schema to include `date_created`
+    #     delta_table = DeltaTable.forName(spark, delta_table_name)
+    #     existing_schema = delta_table.toDF().schema
+    #     existing_fields = {field.name for field in existing_schema.fields}
+    #     new_fields = {field.name for field in table_schema.fields} - existing_fields
 
-            if new_fields:
-                print(f"Adding new fields through schema evolution: {new_fields}")
-                # Append an empty DataFrame with the updated schema to trigger schema evolution
-                empty_df = spark.createDataFrame([], table_schema)
-                empty_df.write.format("delta").mode("append").option(
-                    "mergeSchema", "true"
-                ).saveAsTable(delta_table_name)
-                print(f"Schema evolution completed for {delta_table_name}.")
-            else:
-                print("No schema evolution required; all fields are already present.")
-        else:
-            print(f"Delta table does not exist: {delta_table_name}")
+    #     if new_fields:
+    #         print(f"Adding new fields through schema evolution: {new_fields}")
+    #         # Append an empty DataFrame with the updated schema to trigger schema evolution
+    #         empty_df = spark.createDataFrame([], table_schema)
+    #         empty_df.write.format("delta").mode("append").option(
+    #             "mergeSchema", "true"
+    #         ).saveAsTable(delta_table_name)
+    #         print(f"Schema evolution completed for {delta_table_name}.")
+    #     else:
+    #         print("No schema evolution required; all fields are already present.")
+    # else:
+    #     print(f"Delta table does not exist: {delta_table_name}")
 
-            # Create a new Delta table with the defined schema
-            empty_df = spark.createDataFrame([], table_schema)
-            empty_df.write.format("delta").option("mergeSchema", "true").saveAsTable(
-                delta_table_name
-            )
-            print(f"Delta table created successfully: {delta_table_name}")
+    #     # Create a new Delta table with the defined schema
+    #     empty_df = spark.createDataFrame([], table_schema)
+    #     empty_df.write.format("delta").option("mergeSchema", "true").saveAsTable(
+    #         delta_table_name
+    #     )
+    #     print(f"Delta table created successfully: {delta_table_name}")
 
-    elif workspace_url == staging_workspace_url:
-        # Define the Delta table name in Databricks
-        delta_table_name = "`era5-daily-data`.bronze_staging.era5_inventory_table"
+    # elif workspace_url == staging_workspace_url:
+    #     # Define the Delta table name in Databricks
+    #     delta_table_name = "`era5-daily-data`.bronze_staging.era5_inventory_table"
 
-        # Define the schema (if needed for initial creation)
-        table_schema = StructType(
-            [
-                StructField("date_updated", DateType(), True),
-                StructField("source_file", StringType(), True),
-                StructField("Source_File_Path", StringType(), True),
-                StructField("date_modified_in_s3", TimestampType(), True),
-                StructField("date_created", DateType(), True),
-            ]
-        )
+    #     # Define the schema (if needed for initial creation)
+    #     table_schema = StructType(
+    #         [
+    #             StructField("date_updated", DateType(), True),
+    #             StructField("source_file", StringType(), True),
+    #             StructField("Source_File_Path", StringType(), True),
+    #             StructField("date_modified_in_s3", TimestampType(), True),
+    #             StructField("date_created", DateType(), True),
+    #         ]
+    #     )
 
-        # Check if the Delta table already exists
-        if spark.catalog.tableExists(delta_table_name):
-            print(f"Delta table exists: {delta_table_name}")
+    #     # Check if the Delta table already exists
+    #     if spark.catalog.tableExists(delta_table_name):
+    #         print(f"Delta table exists: {delta_table_name}")
 
-            # Validate or evolve the schema to include `date_created`
-            delta_table = DeltaTable.forName(spark, delta_table_name)
-            existing_schema = delta_table.toDF().schema
-            existing_fields = {field.name for field in existing_schema.fields}
-            new_fields = {field.name for field in table_schema.fields} - existing_fields
+    #         # Validate or evolve the schema to include `date_created`
+    #         delta_table = DeltaTable.forName(spark, delta_table_name)
+    #         existing_schema = delta_table.toDF().schema
+    #         existing_fields = {field.name for field in existing_schema.fields}
+    #         new_fields = {field.name for field in table_schema.fields} - existing_fields
 
-            if new_fields:
-                print(f"Adding new fields through schema evolution: {new_fields}")
-                # Append an empty DataFrame with the updated schema to trigger schema evolution
-                empty_df = spark.createDataFrame([], table_schema)
-                empty_df.write.format("delta").mode("append").option(
-                    "mergeSchema", "true"
-                ).saveAsTable(delta_table_name)
-                print(f"Schema evolution completed for {delta_table_name}.")
-            else:
-                print("No schema evolution required; all fields are already present.")
-        else:
-            print(f"Delta table does not exist: {delta_table_name}")
+    #         if new_fields:
+    #             print(f"Adding new fields through schema evolution: {new_fields}")
+    #             # Append an empty DataFrame with the updated schema to trigger schema evolution
+    #             empty_df = spark.createDataFrame([], table_schema)
+    #             empty_df.write.format("delta").mode("append").option(
+    #                 "mergeSchema", "true"
+    #             ).saveAsTable(delta_table_name)
+    #             print(f"Schema evolution completed for {delta_table_name}.")
+    #         else:
+    #             print("No schema evolution required; all fields are already present.")
+    #     else:
+    #         print(f"Delta table does not exist: {delta_table_name}")
 
-            # Create a new Delta table with the defined schema
-            empty_df = spark.createDataFrame([], table_schema)
-            empty_df.write.format("delta").option("mergeSchema", "true").saveAsTable(
-                delta_table_name
-            )
-            print(f"Delta table created successfully: {delta_table_name}")
+    #         # Create a new Delta table with the defined schema
+    #         empty_df = spark.createDataFrame([], table_schema)
+    #         empty_df.write.format("delta").option("mergeSchema", "true").saveAsTable(
+    #             delta_table_name
+    #         )
+    #         print(f"Delta table created successfully: {delta_table_name}")
 
-    else:
-        # Do not run if not in the dev or staging workspace
-        print("This function is not executed in this workspace.")
+    # else:
+    #     # Do not run if not in the dev or staging workspace
+    #     print("This function is not executed in this workspace.")
 
-    if workspace_url == dev_workspace_url:
-        # If in the dev workspace, run on a small subset of the data
-        target_folder = "/Volumes/era5-daily-data/bronze_dev/era5_gwsc_staging_folder"
-        table_name = "`era5-daily-data`.bronze_dev.era5_inventory_table"
+    # if workspace_url == dev_workspace_url:
+    #     # If in the dev workspace, run on a small subset of the data
+    #     target_folder = "/Volumes/era5-daily-data/bronze_dev/era5_gwsc_staging_folder"
+    #     table_name = "`era5-daily-data`.bronze_dev.era5_inventory_table"
 
-        start_date = "2011-05-14"
-        end_date = "2011-05-17"
-        source_folder = "/Volumes/aer-processed/era5/daily_summary"
-        prefix = "reanalysis-era5-sfc-daily-"
-        date_pattern = "%Y-%m-%d"
-        source_file_attr = "source_file"
+    #     start_date = "2011-05-14"
+    #     end_date = "2011-05-17"
+    #     source_folder = "/Volumes/aer-processed/era5/daily_summary"
+    #     prefix = "reanalysis-era5-sfc-daily-"
+    #     date_pattern = "%Y-%m-%d"
+    #     source_file_attr = "source_file"
 
-        # Dynamically extract schema or define it
-        if spark.catalog.tableExists(table_name):
-            table_schema = DeltaTable.forName(spark, table_name).toDF().schema
-            print(f"Dynamically extracted schema for table {table_name}:")
-            for field in table_schema:
-                print(f"  {field.name}: {field.dataType}")
-        else:
-            print(f"Table does not exist. Please create the table first")
+    #     # Dynamically extract schema or define it
+    #     if spark.catalog.tableExists(table_name):
+    #         table_schema = DeltaTable.forName(spark, table_name).toDF().schema
+    #         print(f"Dynamically extracted schema for table {table_name}:")
+    #         for field in table_schema:
+    #             print(f"  {field.name}: {field.dataType}")
+    #     else:
+    #         print(f"Table does not exist. Please create the table first")
 
-        # Run your function
-        copy_and_move_files_by_date_and_keep_inventory(
-            spark,
-            start_date,
-            end_date,
-            source_folder,
-            target_folder,
-            prefix,
-            table_schema,
-            table_name,
-            date_pattern,
-            source_file_attr,
-        )
+    #     # Run your function
+    #     copy_and_move_files_by_date_and_keep_inventory(
+    #         spark,
+    #         start_date,
+    #         end_date,
+    #         source_folder,
+    #         target_folder,
+    #         prefix,
+    #         table_schema,
+    #         table_name,
+    #         date_pattern,
+    #         source_file_attr,
+    #     )
 
-        print("Function executed in the dev workspace on a small subset of the data.")
+    #     print("Function executed in the dev workspace on a small subset of the data.")
 
-    elif workspace_url == staging_workspace_url:
-        # If in the staging workspace, run on the entire data
-        target_folder = (
-            "/Volumes/era5-daily-data/bronze_staging/era5_gwsc_staging_folder"
-        )
-        table_name = "`era5-daily-data`.bronze_staging.era5_inventory_table"
+    # elif workspace_url == staging_workspace_url:
+    #     # If in the staging workspace, run on the entire data
+    #     target_folder = (
+    #         "/Volumes/era5-daily-data/bronze_staging/era5_gwsc_staging_folder"
+    #     )
+    #     table_name = "`era5-daily-data`.bronze_staging.era5_inventory_table"
 
-        start_date = "2011-05-14"
-        end_date = "2011-05-17"
-        source_folder = "/Volumes/aer-processed/era5/daily_summary"
-        prefix = "reanalysis-era5-sfc-daily-"
-        date_pattern = "%Y-%m-%d"
-        source_file_attr = "source_file"
+    #     start_date = "2011-05-14"
+    #     end_date = "2011-05-17"
+    #     source_folder = "/Volumes/aer-processed/era5/daily_summary"
+    #     prefix = "reanalysis-era5-sfc-daily-"
+    #     date_pattern = "%Y-%m-%d"
+    #     source_file_attr = "source_file"
 
-        # Dynamically extract schema or define it
-        if spark.catalog.tableExists(table_name):
-            table_schema = DeltaTable.forName(spark, table_name).toDF().schema
-            print(f"Dynamically extracted schema for table {table_name}:")
-            for field in table_schema:
-                print(f"  {field.name}: {field.dataType}")
-        else:
-            print(f"Table does not exist. Please create the table first")
+    #     # Dynamically extract schema or define it
+    #     if spark.catalog.tableExists(table_name):
+    #         table_schema = DeltaTable.forName(spark, table_name).toDF().schema
+    #         print(f"Dynamically extracted schema for table {table_name}:")
+    #         for field in table_schema:
+    #             print(f"  {field.name}: {field.dataType}")
+    #     else:
+    #         print(f"Table does not exist. Please create the table first")
 
-        # Run your function
-        copy_and_move_files_by_date_and_keep_inventory(
-            spark,
-            start_date,
-            end_date,
-            source_folder,
-            target_folder,
-            prefix,
-            table_schema,
-            table_name,
-            date_pattern,
-            source_file_attr,
-        )
+    #     # Run your function
+    #     copy_and_move_files_by_date_and_keep_inventory(
+    #         spark,
+    #         start_date,
+    #         end_date,
+    #         source_folder,
+    #         target_folder,
+    #         prefix,
+    #         table_schema,
+    #         table_name,
+    #         date_pattern,
+    #         source_file_attr,
+    #     )
 
-        print("Function executed in the staging workspace on the entire data.")
+    #     print("Function executed in the staging workspace on the entire data.")
 
-    else:
-        # Do not run the function if not in the dev workspace
-        print("This function is not executed in this workspace.")
+    # else:
+    #     # Do not run the function if not in the dev workspace
+    #     print("This function is not executed in this workspace.")
 
 
 if __name__ == "__main__":
