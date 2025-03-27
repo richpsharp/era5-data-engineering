@@ -6,5 +6,5 @@ resources:
         - task_key: run_source_to_staging
           # this is the i3.... 1 DBU/h node
           existing_cluster_id: "0323-185451-9kdw6hmy"
-          python_task:
-            python_file: src/01_Source_to_Staging.py
+          spark_python_task:
+            python_file: ../src/01_Source_to_Staging.py

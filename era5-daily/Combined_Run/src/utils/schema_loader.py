@@ -15,7 +15,7 @@ _type_mapping = {
 }
 
 
-def load_schema(table_name):
+def load_schema(schema_yaml_path, table_name):
     """
     Loads a Spark StructType schema for the given table_name from a YAML file
     specified by the SCHEMA_YAML_PATH environment variable.
@@ -29,7 +29,6 @@ def load_schema(table_name):
     """
 
     # check that the environment variable is declared in the DAB.
-    schema_yaml_path = os.environ.get("SCHEMA_YAML_PATH")
     if schema_yaml_path is None:
         raise ValueError(
             "SCHEMA_YAML_PATH environment variable is not set. "
