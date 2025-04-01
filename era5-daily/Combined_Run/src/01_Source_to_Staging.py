@@ -8,6 +8,11 @@ import os
 from datetime import datetime
 
 
+# data starts here and we'll use it to set a threshold for when the data should
+# be pulled
+ERA5_START_DATE = datetime.datetime(1950, 1, 1)
+
+
 def copy_and_move_files_by_date_and_keep_inventory(
     spark,
     start_date,
@@ -535,3 +540,7 @@ if __name__ == "__main__":
     )
     print(table_schema)
     # main()
+    # copy the file
+    # hash the file
+    # check the index to see if it's there already
+    # if not, copy and update table
