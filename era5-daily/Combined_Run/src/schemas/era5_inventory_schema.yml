@@ -1,16 +1,16 @@
 tables:
   era5_inventory_table_v2:
-    database: era5-daily-data
+    database: era5_daily_data
     schema: bronze_dev
     columns:
       - name: ingested_at
         type: timestamp
         nullable: false
-        description: "Datetime of ingestion"
+        description: "Timestamp of ingestion"
       - name: Source_File_Path
         type: string
         nullable: false
-        description: "Path to source file relative to the volume"
+        description: "Path to source file relative to the volume root"
       - name: source_modified_at
         type: timestamp
         nullable: false
