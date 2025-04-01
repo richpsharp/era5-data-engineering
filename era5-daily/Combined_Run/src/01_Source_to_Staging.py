@@ -7,6 +7,7 @@ from config import ERA5_INVENTORY_TABLE_NAME
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
 import xarray as xr
+from utils.catalog_support import resolve_table_path
 
 
 # data starts here and we'll use it to set a threshold for when the data should
@@ -534,6 +535,7 @@ def copy_and_move_files_by_date_and_keep_inventory(
 #     # Do not run the function if not in the dev workspace
 #     print("This function is not executed in this workspace.")
 
+
 def main():
     table_definition = load_table_struct(
         ERA5_INVENTORY_TABLE_DEFINITION_PATH, ERA5_INVENTORY_TABLE_NAME
@@ -541,14 +543,14 @@ def main():
     current_catalog = spark.catalog.currentCatalog()
     print(current_catalog)
     return
-    current_catalog = 'experimental'
+    current_catalog = "experimental"
     current_schema = spark.catalog.currentDatabase()
     full_table_path = (
         f"{current_catalog}.{current_schema}.{ERA5_INVENTORY_TABLE_NAME}"
     )
     print(f"creating {full_table_path}")
     create_table(full_table_path, table_definition)
-    print('all done')
+    print("all done")
     # main()
     # copy the file
     # hash the file
@@ -558,4 +560,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
