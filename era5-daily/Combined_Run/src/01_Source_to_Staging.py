@@ -1,5 +1,10 @@
+"""ERA5 source to staging pipeline."""
+
+import sys
 from datetime import datetime
 import os
+import logging
+
 
 from databricks.sdk.runtime import spark
 from config import ERA5_INVENTORY_TABLE_DEFINITION_PATH
@@ -9,6 +14,17 @@ from utils.table_definition_loader import load_table_struct
 import xarray as xr
 from utils.catalog_support import resolve_table_path
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    stream=sys.stdout,
+    format=(
+        "%(asctime)s (%(relativeCreated)d) %(levelname)s %(name)s"
+        " [%(funcName)s:%(lineno)d] %(message)s"
+    ),
+)
+
+
+LOGGER = logging.getLogger(__name__)
 
 # data starts here and we'll use it to set a threshold for when the data should
 # be pulled
@@ -60,19 +76,19 @@ def copy_and_move_files_by_date_and_keep_inventory(
         try:
             delta_table = DeltaTable.forName(spark, table_name)
             existing_schema = delta_table.toDF().schema
-            print("Existing Delta Table Schema:")
+            LOGGER("Existing Delta Table Schema:")
             for field in existing_schema:
-                print(f"Field: {field.name}, Type: {field.dataType}")
+                LOGGER(f"Field: {field.name}, Type: {field.dataType}")
         except Exception as e:
-            print(
+            LOGGER(
                 f"Delta table '{table_name}' does not exist or cannot be loaded: {e}"
             )
             existing_schema = None
 
-        # Print the incoming DataFrame schema
-        print("Incoming DataFrame Schema:")
+        # LOGGER the incoming DataFrame schema
+        LOGGER("Incoming DataFrame Schema:")
         for field in df.schema:
-            print(f"Field: {field.name}, Type: {field.dataType}")
+            LOGGER(f"Field: {field.name}, Type: {field.dataType}")
 
         # Perform type casting to ensure compatibility
         df = df.withColumn("date_updated", df["date_updated"].cast(DateType()))
@@ -82,7 +98,7 @@ def copy_and_move_files_by_date_and_keep_inventory(
         )
 
         # Debug DataFrame after casting
-        print("DataFrame after casting:")
+        LOGGER("DataFrame after casting:")
         df.show()
 
         # Write to the Delta table with schema evolution enabled
@@ -93,16 +109,16 @@ def copy_and_move_files_by_date_and_keep_inventory(
                 .option("mergeSchema", "true")  # Enable schema evolution
                 .saveAsTable(table_name)
             )
-            print(
+            LOGGER(
                 f"Data successfully written to Delta table '{table_name}' with schema evolution enabled."
             )
         except Exception as e:
-            print(f"Error while writing to Delta table: {e}")
+            LOGGER(f"Error while writing to Delta table: {e}")
 
     # Parse dates
     start_date = datetime.strptime(start_date, date_pattern)
     end_date = datetime.strptime(end_date, date_pattern)
-    print(f"Processing files between {start_date} and {end_date}.")
+    LOGGER(f"Processing files between {start_date} and {end_date}.")
 
     # List all files in the source folder that match the prefix
     all_files = [
@@ -133,13 +149,13 @@ def copy_and_move_files_by_date_and_keep_inventory(
             filepath = os.path.join(source_folder, filename)
             filepaths_in_range.append(filepath)
 
-    print(f"Files within date range: {filepaths_in_range}")
+    LOGGER(f"Files within date range: {filepaths_in_range}")
 
     # Define a function to process, update metadata, and move each NetCDF file
     def process_and_move_file(filepath):
         ## check if the file exists first, if not then skip it
         if not os.path.exists(filepath):
-            print(f"File not found: {filepath}. Skipping.")
+            LOGGER(f"File not found: {filepath}. Skipping.")
             return f"Skipped {filepath} (file not found)."
 
         ## file processing if the file exists
@@ -157,7 +173,7 @@ def copy_and_move_files_by_date_and_keep_inventory(
                     date_updated, "%m/%d/%Y"
                 ).date()
             except ValueError:
-                print(f"Invalid date format for date_updated: {date_updated}")
+                LOGGER(f"Invalid date format for date_updated: {date_updated}")
                 date_updated = None
 
         ## parse date in date_created if it exists
@@ -167,10 +183,10 @@ def copy_and_move_files_by_date_and_keep_inventory(
                     date_created, "%m/%d/%Y"
                 ).date()
             except ValueError:
-                print(f"Invalid date format for date_created: {date_created}")
+                LOGGER(f"Invalid date format for date_created: {date_created}")
                 date_created = None
 
-        print(
+        LOGGER(
             f"Processing file: {filename}, date_updated: {date_updated}, date_created: {date_created}"
         )
 
@@ -178,7 +194,7 @@ def copy_and_move_files_by_date_and_keep_inventory(
         ds.to_netcdf(temp_file_path)
         date_modified_in_s3 = datetime.fromtimestamp(os.path.getmtime(filepath))
 
-        print(
+        LOGGER(
             f"Processing file: {filename}, date_updated: {date_updated}, date_modified_in_s3: {date_modified_in_s3}"
         )
 
@@ -204,9 +220,9 @@ def copy_and_move_files_by_date_and_keep_inventory(
         )
 
         if existing_file_df:
-            print(f"File '{filename}' already exists in the inventory table.")
+            LOGGER(f"File '{filename}' already exists in the inventory table.")
         else:
-            print(
+            LOGGER(
                 f"File '{filename}' is a brand new file in the inventory table."
             )
 
@@ -219,11 +235,11 @@ def copy_and_move_files_by_date_and_keep_inventory(
                 ".nc", "_unknown_version.nc"
             )
             new_version = True
-            print(f"Appending unknown version of '{filename}' to inventory.")
+            LOGGER(f"Appending unknown version of '{filename}' to inventory.")
 
         elif date_updated is None and date_created is not None:
             # Handle files with only date_created but no date_updated
-            print(
+            LOGGER(
                 f"Processing file '{filename}' with date_created only, treating as known version."
             )
 
@@ -247,10 +263,10 @@ def copy_and_move_files_by_date_and_keep_inventory(
                         existing_date_modified_in_s3
                     )
 
-                print(
+                LOGGER(
                     f"Comparing '{filename}': date_updated ({date_updated}) vs existing_date_updated ({existing_date_updated})"
                 )
-                print(
+                LOGGER(
                     f"Comparing '{filename}': date_modified_in_s3 ({date_modified_in_s3}) vs existing_date_modified_in_s3 ({existing_date_modified_in_s3})"
                 )
 
@@ -264,21 +280,21 @@ def copy_and_move_files_by_date_and_keep_inventory(
                     filename = filename.replace(".nc", "_v1.1.nc")
                     temp_file_path = temp_file_path.replace(".nc", "_v1.1.nc")
                     new_version = True
-                    print(f"Appending new version '{filename}' to inventory.")
+                    LOGGER(f"Appending new version '{filename}' to inventory.")
 
-        # Before appending, print whether it's a new version or not
+        # Before appending, LOGGER whether it's a new version or not
         if new_version:
-            print(
+            LOGGER(
                 f"File '{filename}' is a new version (either _v1.1 or _unknown)."
             )
         else:
-            print(
+            LOGGER(
                 f"File '{filename}' is NOT a new version (no _v1.1 or _unknown)."
             )
 
         # Only append if it's a new version or unknown version
         if new_version or not existing_file_df:
-            print(f"Appending file '{filename}' to inventory table.")
+            LOGGER(f"Appending file '{filename}' to inventory table.")
             target_file_path = os.path.join(target_folder, filename)
 
             # Check if the temporary file exists before moving
@@ -293,7 +309,7 @@ def copy_and_move_files_by_date_and_keep_inventory(
                     else:
                         raise
             else:
-                print(
+                LOGGER(
                     f"Temporary file {temp_file_path} does not exist. Skipping move operation."
                 )
                 return f"Skipped {filename} (temporary file not found)."
@@ -309,28 +325,28 @@ def copy_and_move_files_by_date_and_keep_inventory(
             ]
 
             # Debug metadata
-            print("Metadata before creating DataFrame:")
+            LOGGER("Metadata before creating DataFrame:")
             for item in metadata:
-                print(f"  {item}")
-            print("Metadata field types:")
+                LOGGER(f"  {item}")
+            LOGGER("Metadata field types:")
             for item in metadata[0]:
-                print(f"  {type(item)}")
+                LOGGER(f"  {type(item)}")
 
-            print("Extracted or defined schema:")
+            LOGGER("Extracted or defined schema:")
             for field in table_schema:
-                print(f"  {field.name}: {field.dataType}")
+                LOGGER(f"  {field.name}: {field.dataType}")
 
             metadata_df = spark.createDataFrame(metadata, schema=table_schema)
 
             # Debug DataFrame
-            print("DataFrame after creation:")
+            LOGGER("DataFrame after creation:")
             metadata_df.show()
-            print("DataFrame schema after creation:")
-            metadata_df.printSchema()
+            LOGGER("DataFrame schema after creation:")
+            metadata_df.LOGGERSchema()
 
             # Debug before casting
-            print("DataFrame schema before casting:")
-            metadata_df.printSchema()
+            LOGGER("DataFrame schema before casting:")
+            metadata_df.LOGGERSchema()
 
             metadata_df = metadata_df.withColumn(
                 "date_modified_in_s3",
@@ -341,15 +357,15 @@ def copy_and_move_files_by_date_and_keep_inventory(
             )
 
             # Debug after casting
-            print("DataFrame schema after casting:")
-            metadata_df.printSchema()
+            LOGGER("DataFrame schema after casting:")
+            metadata_df.LOGGERSchema()
             metadata_df.show()
 
             # Call the schema evolution function
             validate_and_merge_schema(spark, metadata_df, table_name)
 
         else:
-            print(f"No append for '{filename}', no version change.")
+            LOGGER(f"No append for '{filename}', no version change.")
 
         return f"Processed and moved {filename} to {target_folder}"
 
@@ -358,9 +374,9 @@ def copy_and_move_files_by_date_and_keep_inventory(
     ]
 
     for result in results:
-        print(result)
+        LOGGER(result)
 
-    print("File processing, metadata update, and move complete.")
+    LOGGER("File processing, metadata update, and move complete.")
 
 
 # def main():
@@ -378,7 +394,7 @@ def copy_and_move_files_by_date_and_keep_inventory(
 
 # # Check if the Delta table already exists
 # if spark.catalog.tableExists(delta_table_name):
-#     print(f"Delta table exists: {delta_table_name}")
+#     LOGGER(f"Delta table exists: {delta_table_name}")
 
 #     # Validate or evolve the schema to include `date_created`
 #     delta_table = DeltaTable.forName(spark, delta_table_name)
@@ -387,24 +403,24 @@ def copy_and_move_files_by_date_and_keep_inventory(
 #     new_fields = {field.name for field in table_schema.fields} - existing_fields
 
 #     if new_fields:
-#         print(f"Adding new fields through schema evolution: {new_fields}")
+#         LOGGER(f"Adding new fields through schema evolution: {new_fields}")
 #         # Append an empty DataFrame with the updated schema to trigger schema evolution
 #         empty_df = spark.createDataFrame([], table_schema)
 #         empty_df.write.format("delta").mode("append").option(
 #             "mergeSchema", "true"
 #         ).saveAsTable(delta_table_name)
-#         print(f"Schema evolution completed for {delta_table_name}.")
+#         LOGGER(f"Schema evolution completed for {delta_table_name}.")
 #     else:
-#         print("No schema evolution required; all fields are already present.")
+#         LOGGER("No schema evolution required; all fields are already present.")
 # else:
-#     print(f"Delta table does not exist: {delta_table_name}")
+#     LOGGER(f"Delta table does not exist: {delta_table_name}")
 
 #     # Create a new Delta table with the defined schema
 #     empty_df = spark.createDataFrame([], table_schema)
 #     empty_df.write.format("delta").option("mergeSchema", "true").saveAsTable(
 #         delta_table_name
 #     )
-#     print(f"Delta table created successfully: {delta_table_name}")
+#     LOGGER(f"Delta table created successfully: {delta_table_name}")
 
 # elif workspace_url == staging_workspace_url:
 #     # Define the Delta table name in Databricks
@@ -423,7 +439,7 @@ def copy_and_move_files_by_date_and_keep_inventory(
 
 #     # Check if the Delta table already exists
 #     if spark.catalog.tableExists(delta_table_name):
-#         print(f"Delta table exists: {delta_table_name}")
+#         LOGGER(f"Delta table exists: {delta_table_name}")
 
 #         # Validate or evolve the schema to include `date_created`
 #         delta_table = DeltaTable.forName(spark, delta_table_name)
@@ -432,28 +448,28 @@ def copy_and_move_files_by_date_and_keep_inventory(
 #         new_fields = {field.name for field in table_schema.fields} - existing_fields
 
 #         if new_fields:
-#             print(f"Adding new fields through schema evolution: {new_fields}")
+#             LOGGER(f"Adding new fields through schema evolution: {new_fields}")
 #             # Append an empty DataFrame with the updated schema to trigger schema evolution
 #             empty_df = spark.createDataFrame([], table_schema)
 #             empty_df.write.format("delta").mode("append").option(
 #                 "mergeSchema", "true"
 #             ).saveAsTable(delta_table_name)
-#             print(f"Schema evolution completed for {delta_table_name}.")
+#             LOGGER(f"Schema evolution completed for {delta_table_name}.")
 #         else:
-#             print("No schema evolution required; all fields are already present.")
+#             LOGGER("No schema evolution required; all fields are already present.")
 #     else:
-#         print(f"Delta table does not exist: {delta_table_name}")
+#         LOGGER(f"Delta table does not exist: {delta_table_name}")
 
 #         # Create a new Delta table with the defined schema
 #         empty_df = spark.createDataFrame([], table_schema)
 #         empty_df.write.format("delta").option("mergeSchema", "true").saveAsTable(
 #             delta_table_name
 #         )
-#         print(f"Delta table created successfully: {delta_table_name}")
+#         LOGGER(f"Delta table created successfully: {delta_table_name}")
 
 # else:
 #     # Do not run if not in the dev or staging workspace
-#     print("This function is not executed in this workspace.")
+#     LOGGER("This function is not executed in this workspace.")
 
 # if workspace_url == dev_workspace_url:
 #     # If in the dev workspace, run on a small subset of the data
@@ -470,11 +486,11 @@ def copy_and_move_files_by_date_and_keep_inventory(
 #     # Dynamically extract schema or define it
 #     if spark.catalog.tableExists(table_name):
 #         table_schema = DeltaTable.forName(spark, table_name).toDF().schema
-#         print(f"Dynamically extracted schema for table {table_name}:")
+#         LOGGER(f"Dynamically extracted schema for table {table_name}:")
 #         for field in table_schema:
-#             print(f"  {field.name}: {field.dataType}")
+#             LOGGER(f"  {field.name}: {field.dataType}")
 #     else:
-#         print(f"Table does not exist. Please create the table first")
+#         LOGGER(f"Table does not exist. Please create the table first")
 
 #     # Run your function
 #     copy_and_move_files_by_date_and_keep_inventory(
@@ -490,7 +506,7 @@ def copy_and_move_files_by_date_and_keep_inventory(
 #         source_file_attr,
 #     )
 
-#     print("Function executed in the dev workspace on a small subset of the data.")
+#     LOGGER("Function executed in the dev workspace on a small subset of the data.")
 
 # elif workspace_url == staging_workspace_url:
 #     # If in the staging workspace, run on the entire data
@@ -509,11 +525,11 @@ def copy_and_move_files_by_date_and_keep_inventory(
 #     # Dynamically extract schema or define it
 #     if spark.catalog.tableExists(table_name):
 #         table_schema = DeltaTable.forName(spark, table_name).toDF().schema
-#         print(f"Dynamically extracted schema for table {table_name}:")
+#         LOGGER(f"Dynamically extracted schema for table {table_name}:")
 #         for field in table_schema:
-#             print(f"  {field.name}: {field.dataType}")
+#             LOGGER(f"  {field.name}: {field.dataType}")
 #     else:
-#         print(f"Table does not exist. Please create the table first")
+#         LOGGER(f"Table does not exist. Please create the table first")
 
 #     # Run your function
 #     copy_and_move_files_by_date_and_keep_inventory(
@@ -529,28 +545,30 @@ def copy_and_move_files_by_date_and_keep_inventory(
 #         source_file_attr,
 #     )
 
-#     print("Function executed in the staging workspace on the entire data.")
+#     LOGGER("Function executed in the staging workspace on the entire data.")
 
 # else:
 #     # Do not run the function if not in the dev workspace
-#     print("This function is not executed in this workspace.")
+#     LOGGER("This function is not executed in this workspace.")
 
 
 def main():
+    """Entrypoint."""
     table_definition = load_table_struct(
         ERA5_INVENTORY_TABLE_DEFINITION_PATH, ERA5_INVENTORY_TABLE_NAME
     )
-    current_catalog = spark.catalog.currentCatalog()
-    print(current_catalog)
-    return
-    current_catalog = "experimental"
-    current_schema = spark.catalog.currentDatabase()
-    full_table_path = (
-        f"{current_catalog}.{current_schema}.{ERA5_INVENTORY_TABLE_NAME}"
-    )
-    print(f"creating {full_table_path}")
+    full_table_path = resolve_table_path(ERA5_INVENTORY_TABLE_NAME)
+    LOGGER(f"creating {full_table_path}")
     create_table(full_table_path, table_definition)
-    print("all done")
+    LOGGER("all done")
+    latest_date_query = f"""
+        SELECT MAX(data_date) AS latest_date
+        FROM {full_table_path}
+    """
+    latest_date_df = spark.sql(latest_date_query)
+    latest_date = latest_date_df.collect()[0]["latest_date"]
+
+    return latest_date
     # main()
     # copy the file
     # hash the file
