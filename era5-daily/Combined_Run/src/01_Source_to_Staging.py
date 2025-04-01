@@ -1,8 +1,8 @@
-import config
-from config import ERA5_INVENTORY_SCHEMA_PATH
+from config import ERA5_INVENTORY_TABLE_PATH
 from config import ERA5_INVENTORY_TABLE_NAME
 
 from utils.table_definition_loader import load_table_struct
+from utils.table_definition_loader import create_table
 import xarray as xr
 import os
 from datetime import datetime
@@ -535,10 +535,11 @@ def copy_and_move_files_by_date_and_keep_inventory(
 
 
 if __name__ == "__main__":
-    table_schema = load_table_struct(
-        ERA5_INVENTORY_SCHEMA_PATH, ERA5_INVENTORY_TABLE_NAME
+    table_definition = load_table_struct(
+        ERA5_INVENTORY_TABLE_PATH, ERA5_INVENTORY_TABLE_NAME
     )
-    print(table_schema)
+    create_table(full_table_path, table_definition)
+    print(table_definition)
     # main()
     # copy the file
     # hash the file

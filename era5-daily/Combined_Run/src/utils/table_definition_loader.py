@@ -1,3 +1,5 @@
+"""Load and manage Spark table definitions from YAML-formatted files."""
+
 import os
 
 import spark
@@ -18,12 +20,10 @@ _type_mapping = {
 }
 
 
-def load_table_struct(schema_yaml_path, table_name):
-    """
-    Loads a Spark StructType schema definition for a given table from a YAML
-        file.
+def load_table_struct(yaml_path, table_name):
+    """Loads a Spark StructType schema definition for a table from a YAML file.
 
-    Parameters:
+    Args:
         yaml_path (str): Absolute or relative path to the YAML file containing
             table definitions. Example: '/path/to/table_definitions.yml'
         table_name (str): Name of the table to load the schema definition for.
@@ -40,25 +40,29 @@ def load_table_struct(schema_yaml_path, table_name):
         KeyError: If the YAML file is missing required keys
             ('tables', table_name, column details).
     """
-    schema_path = os.path.abspath(schema_yaml_path)
-    if not os.path.exists(schema_path):
-        raise FileNotFoundError(f"Schema file not found at: {schema_path}")
+    definition_path = os.path.abspath(yaml_path)
+    if not os.path.exists(definition_path):
+        raise FileNotFoundError(
+            f"Definition file not found at: {definition_path}"
+        )
 
-    with open(schema_path, "r") as file:
+    with open(definition_path, "r") as file:
         schema_def = yaml.safe_load(file)
 
     # we expect a "tables" section with "columns"
     if "tables" not in schema_def:
-        raise KeyError(f'No "tables" key found in schema file: {schema_path}')
+        raise KeyError(
+            f'No "tables" key found in definition file: {definition_path}'
+        )
     if table_name not in schema_def["tables"]:
         raise KeyError(
-            f'Table "{table_name}" not found in schema file: {schema_path}'
+            f'Table "{table_name}" not found in definition file: {definition_path}'
         )
     table_info = schema_def["tables"][table_name]
     columns = table_info.get("columns", [])
     if not columns:
         raise KeyError(
-            f'No "columns" list found for table "{table_name}" in {schema_path}'
+            f'No "columns" list found for table "{table_name}" in {definition_path}'
         )
 
     # read all the columns, check that they are named
@@ -87,11 +91,9 @@ def load_table_struct(schema_yaml_path, table_name):
 
 
 def create_table(full_table_path, table_definition):
-    """
-    Creates a Delta table in Databricks if it does not already exist, using
-    the provided table definition.
+    """Creates a Delta table in Databricks if it does not already exist.
 
-    Parameters:
+    Args:
         full_table_path (str): Fully qualified table name in the format
             '<catalog>.<schema>.<table>'.
             Example: 'analytics_catalog.bronze_schema.era5_inventory'
