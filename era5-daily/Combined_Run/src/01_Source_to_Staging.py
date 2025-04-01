@@ -15,17 +15,8 @@ from utils.table_definition_loader import load_table_struct
 import xarray as xr
 from utils.catalog_support import resolve_table_path
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    stream=sys.stdout,
-    format=(
-        "%(asctime)s (%(relativeCreated)d) %(levelname)s %(name)s"
-        " [%(funcName)s:%(lineno)d] %(message)s"
-    ),
-)
-
-
 LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 # data starts here and we'll use it to set a threshold for when the data should
 # be pulled
@@ -567,6 +558,7 @@ def main():
     """Entrypoint."""
     start = time.time()
     directory = os.path.join(ERA5_VOLUME_PATH, "daily_summary")
+    LOGGER.debug(f'about to list {directory}')
     file_list = [
         os.path.join(directory, f)
         for f in os.listdir(directory)
