@@ -1,5 +1,6 @@
 """Load and manage Spark table definitions from YAML-formatted files."""
 
+import logging
 import os
 
 from databricks.sdk.runtime import spark
@@ -18,6 +19,8 @@ _type_mapping = {
     "date": DateType(),
     "timestamp": TimestampType(),
 }
+
+LOGGER = logging.getLogger(__name__)
 
 
 def load_table_struct(yaml_path, table_name):
@@ -103,11 +106,16 @@ def create_table(full_table_path, table_definition):
     Returns:
         None
     """
+    catalog_schema_str = full_table_path.rsplit(".", 1)[0]
+    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {catalog_schema_str}")
+
     column_definitions = ", ".join(
         f"{field.name} {field.dataType.simpleString()}"
         for field in table_definition.fields
     )
-    print(f"Creating table {full_table_path} with columns: {column_definitions}")
+    LOGGER.debug(
+        f"Creating table {full_table_path} with columns: {column_definitions}"
+    )
     spark.sql(
         f"CREATE TABLE IF NOT EXISTS {full_table_path} ({column_definitions}) "
         f"USING DELTA"
