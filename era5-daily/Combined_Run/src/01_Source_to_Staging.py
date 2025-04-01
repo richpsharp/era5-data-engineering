@@ -544,8 +544,8 @@ if __name__ == "__main__":
     full_table_path = (
         f"{current_catalog}.{current_schema}.{ERA5_INVENTORY_TABLE_NAME}"
     )
+    print(f"creating {full_table_path}")
     create_table(full_table_path, table_definition)
-    print(table_definition)
     # main()
     # copy the file
     # hash the file
