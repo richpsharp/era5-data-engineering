@@ -1,11 +1,12 @@
+from datetime import datetime
+import os
+
 from config import ERA5_INVENTORY_TABLE_PATH
 from config import ERA5_INVENTORY_TABLE_NAME
-
-from utils.table_definition_loader import load_table_struct
 from utils.table_definition_loader import create_table
+from utils.table_definition_loader import load_table_struct
+import spark
 import xarray as xr
-import os
-from datetime import datetime
 
 
 # data starts here and we'll use it to set a threshold for when the data should
@@ -537,6 +538,11 @@ def copy_and_move_files_by_date_and_keep_inventory(
 if __name__ == "__main__":
     table_definition = load_table_struct(
         ERA5_INVENTORY_TABLE_PATH, ERA5_INVENTORY_TABLE_NAME
+    )
+    current_catalog = spark.catalog.currentCatalog()
+    current_schema = spark.catalog.currentDatabase()
+    full_table_path = (
+        f"{current_catalog}.{current_schema}.{ERA5_INVENTORY_TABLE_NAME}"
     )
     create_table(full_table_path, table_definition)
     print(table_definition)
