@@ -27,15 +27,6 @@ def load_schema(schema_yaml_path, table_name):
         FileNotFoundError: If the YAML file doesn't exist
         KeyError: If the 'tables' key, the table_name, or a valid 'type' are missing in the YAML
     """
-
-    # check that the environment variable is declared in the DAB.
-    if schema_yaml_path is None:
-        raise ValueError(
-            "SCHEMA_YAML_PATH environment variable is not set. "
-            "Make sure to define it in your databricks.yml under targets->environment."
-        )
-
-    # check that the schema.yml actually exists
     schema_path = os.path.abspath(schema_yaml_path)
     if not os.path.exists(schema_path):
         raise FileNotFoundError(f"Schema file not found at: {schema_path}")
@@ -78,3 +69,16 @@ def load_schema(schema_yaml_path, table_name):
         )
 
     return StructType(struct_fields)
+
+
+def create_table(table_info, table_schema):
+
+    ddl = ", ".join(
+        f"{field.name} {field.dataType.simpleString()}"
+        for field in table_schema.fields
+    )
+    full_table_name = f"{table_info['database']}.{table_info['schema']}.{ERA5_INVENTORY_TABLE_NAME}"
+
+    spark.sql(
+        f"CREATE TABLE IF NOT EXISTS {full_table_name} ({ddl}) USING DELTA"
+    )
