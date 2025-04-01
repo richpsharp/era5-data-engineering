@@ -2,7 +2,7 @@
 
 import os
 
-import spark
+from databricks.sdk.runtime import spark
 import yaml
 
 from pyspark.sql.types import (
@@ -107,6 +107,7 @@ def create_table(full_table_path, table_definition):
         f"{field.name} {field.dataType.simpleString()}"
         for field in table_definition.fields
     )
+    print(f"Creating table {full_table_path} with columns: {column_definitions}")
     spark.sql(
         f"CREATE TABLE IF NOT EXISTS {full_table_path} ({column_definitions}) "
         f"USING DELTA"

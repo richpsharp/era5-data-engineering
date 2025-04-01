@@ -1,17 +1,17 @@
 from datetime import datetime
 import os
 
+from databricks.sdk.runtime import spark
 from config import ERA5_INVENTORY_TABLE_DEFINITION_PATH
 from config import ERA5_INVENTORY_TABLE_NAME
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
-import spark
 import xarray as xr
 
 
 # data starts here and we'll use it to set a threshold for when the data should
 # be pulled
-ERA5_START_DATE = datetime.datetime(1950, 1, 1)
+ERA5_START_DATE = datetime(1950, 1, 1)
 
 
 def copy_and_move_files_by_date_and_keep_inventory(
@@ -534,20 +534,28 @@ def copy_and_move_files_by_date_and_keep_inventory(
 #     # Do not run the function if not in the dev workspace
 #     print("This function is not executed in this workspace.")
 
-
-if __name__ == "__main__":
+def main():
     table_definition = load_table_struct(
         ERA5_INVENTORY_TABLE_DEFINITION_PATH, ERA5_INVENTORY_TABLE_NAME
     )
     current_catalog = spark.catalog.currentCatalog()
+    print(current_catalog)
+    return
+    current_catalog = 'experimental'
     current_schema = spark.catalog.currentDatabase()
     full_table_path = (
         f"{current_catalog}.{current_schema}.{ERA5_INVENTORY_TABLE_NAME}"
     )
     print(f"creating {full_table_path}")
     create_table(full_table_path, table_definition)
+    print('all done')
     # main()
     # copy the file
     # hash the file
     # check the index to see if it's there already
     # if not, copy and update table
+
+
+if __name__ == "__main__":
+    main()
+    
