@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 
-from config import ERA5_INVENTORY_TABLE_PATH
+from config import ERA5_INVENTORY_TABLE_DEFINITION_PATH
 from config import ERA5_INVENTORY_TABLE_NAME
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
@@ -537,7 +537,7 @@ def copy_and_move_files_by_date_and_keep_inventory(
 
 if __name__ == "__main__":
     table_definition = load_table_struct(
-        ERA5_INVENTORY_TABLE_PATH, ERA5_INVENTORY_TABLE_NAME
+        ERA5_INVENTORY_TABLE_DEFINITION_PATH, ERA5_INVENTORY_TABLE_NAME
     )
     current_catalog = spark.catalog.currentCatalog()
     current_schema = spark.catalog.currentDatabase()
