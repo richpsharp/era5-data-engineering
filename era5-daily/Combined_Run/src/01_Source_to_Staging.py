@@ -1,14 +1,15 @@
 """ERA5 source to staging pipeline."""
 
-import sys
 from datetime import datetime
-import os
 import logging
-
+import os
+import sys
+import time
 
 from databricks.sdk.runtime import spark
 from config import ERA5_INVENTORY_TABLE_DEFINITION_PATH
 from config import ERA5_INVENTORY_TABLE_NAME
+from config import ERA5_AER_VOLUME_PATH
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
 import xarray as xr
@@ -564,6 +565,15 @@ def copy_and_move_files_by_date_and_keep_inventory(
 
 def main():
     """Entrypoint."""
+    start = time.time()
+    directory = os.path.join(ERA5_AER_VOLUME_PATH, "daily_summary")
+    file_list = [
+        os.path.join(directory, f)
+        for f in os.listdir(directory)
+        if f.endswith(".nc")
+    ]
+    LOGGER.debug(f"found {len(file_list)} in {time.time()-start:.2f}s")
+    return
     table_definition = load_table_struct(
         ERA5_INVENTORY_TABLE_DEFINITION_PATH, ERA5_INVENTORY_TABLE_NAME
     )
