@@ -15,7 +15,7 @@ _type_mapping = {
 }
 
 
-def load_schema(schema_yaml_path, table_name):
+def load_table_struct(schema_yaml_path, table_name):
     """
     Loads a Spark StructType schema for the given table_name from a YAML file
     specified by the SCHEMA_YAML_PATH environment variable.
