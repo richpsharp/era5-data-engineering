@@ -1,6 +1,6 @@
 """ERA5 source to staging pipeline."""
 
-from datetime import datetime
+import datetime
 from dateutil.relativedelta import relativedelta
 import glob
 import logging
@@ -23,7 +23,7 @@ LOGGER.setLevel(logging.DEBUG)
 
 # data starts here and we'll use it to set a threshold for when the data should
 # be pulled
-ERA5_START_DATE = datetime(1950, 1, 1)
+ERA5_START_DATE = datetime.datetime(1950, 1, 1)
 DELTA_MONTHS = 3  # always search at least 3 months prior
 
 
