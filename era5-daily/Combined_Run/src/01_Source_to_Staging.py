@@ -586,7 +586,7 @@ def main():
         latest_date = ERA5_START_DATE
     LOGGER.debug(latest_date)
 
-    start_date = latest_date - relativedelta(months=DELTA_MONTHS)
+    start_date = (latest_date - relativedelta(months=DELTA_MONTHS)).date()
     end_date = datetime.date.today()
 
     # This is the hard-coded pattern for era5 daily
