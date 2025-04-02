@@ -14,7 +14,7 @@ from config import ERA5_SOURCE_VOLUME_PATH
 from config import ERA5_STAGING_VOLUME_ID
 from databricks.sdk.runtime import spark
 from pyspark.sql import Row
-from tqdm import tqwm
+from tqdm import tqdm
 from utils.catalog_support import get_catalog_schema_fqdn
 from utils.file_utils import copy_file_to_mem
 from utils.file_utils import copy_mem_file_to_path
@@ -85,7 +85,9 @@ def main():
         f"filtered {len(filtered_files)} in {time.time()-start_time:.2f}s"
     )
 
-    for file_date, source_file_path in filtered_files:
+    for file_date, source_file_path in tqdm(
+        filtered_files, desc="Ingesting files"
+    ):
         start = time.time()
         source_file_binary = copy_file_to_mem(source_file_path)
         file_hash = hash_bytes(source_file_binary)
