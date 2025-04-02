@@ -19,6 +19,7 @@ from utils.catalog_support import get_catalog_schema_fqdn
 from utils.file_utils import copy_file_to_mem
 from utils.file_utils import copy_mem_file_to_path
 from utils.file_utils import hash_bytes
+from utils.file_utils import is_netcdf_file_valid
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
 import xarray as xr
@@ -90,6 +91,11 @@ def main():
     ):
         start = time.time()
         source_file_binary = copy_file_to_mem(source_file_path)
+        if not is_netcdf_file_valid(source_file_binary):
+            LOGGER.error(
+                f"Could not open {source_file_path} with xarray, might be "
+                f"corrupt, skipping"
+            )
         file_hash = hash_bytes(source_file_binary)
 
         # Skip if an entry with this file hash already exists

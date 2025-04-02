@@ -1,6 +1,27 @@
 """Module for supporting file operations on Databricks."""
 
+import xarray as xr
+import io
 import hashlib
+
+
+def is_netcdf_file_valid(file_binary):
+    """
+    Check if a NetCDF file (provided as binary data) can be opened with xarray.
+
+    Args:
+        file_binary (bytes): Binary content of the NetCDF file.
+
+    Returns:
+        bool: True if the file is valid, False if corrupt.
+    """
+    try:
+        with xr.open_dataset(io.BytesIO(file_binary)) as ds:
+            # this will raise an exception if it's wrong
+            ds.load()
+        return True
+    except Exception:
+        return False
 
 
 def copy_file_to_mem(source_path):
