@@ -1,9 +1,11 @@
 """ERA5 source to staging pipeline."""
 
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
+import glob
 import logging
 import os
-import sys
+import re
 import time
 
 from databricks.sdk.runtime import spark
@@ -22,6 +24,7 @@ LOGGER.setLevel(logging.DEBUG)
 # data starts here and we'll use it to set a threshold for when the data should
 # be pulled
 ERA5_START_DATE = datetime(1950, 1, 1)
+DELTA_MONTHS = 3  # always search at least 3 months prior
 
 
 def copy_and_move_files_by_date_and_keep_inventory(
@@ -565,15 +568,7 @@ def main():
         "/Volumes", target_volume_fqdn_path.replace(".", "/")
     )
     LOGGER.debug(f"volume created, target directory is: {target_directory}")
-    start = time.time()
-    source_directory = os.path.join(ERA5_SOURCE_VOLUME_PATH, "daily_summary")
-    LOGGER.debug(f"about to list {source_directory}")
-    file_list = [
-        os.path.join(source_directory, f)
-        for f in os.listdir(source_directory)
-        if f.endswith(".nc")
-    ]
-    LOGGER.debug(f"found {len(file_list)} in {time.time()-start:.2f}s")
+
     table_definition = load_table_struct(
         ERA5_INVENTORY_TABLE_DEFINITION_PATH, ERA5_INVENTORY_TABLE_NAME
     )
@@ -587,7 +582,34 @@ def main():
     """
     latest_date_df = spark.sql(latest_date_query)
     latest_date = latest_date_df.collect()[0]["latest_date"]
+    if latest_date is None:
+        latest_date = ERA5_START_DATE
     LOGGER.debug(latest_date)
+
+    start_date = latest_date - relativedelta(months=DELTA_MONTHS)
+    end_date = datetime.date.today()
+
+    # This is the hard-coded pattern for era5 daily
+    start_time = time.time()
+    source_directory = os.path.join(ERA5_SOURCE_VOLUME_PATH, "daily_summary")
+    LOGGER.debug(f"about to search {source_directory}")
+
+    pattern = re.compile(r"reanalysis-era5-sfc-daily-(\d{4}-\d{2}-\d{2})\.nc$")
+    filtered_files = [
+        (file_date, file_path)
+        for file_path in glob.glob(os.path.join(source_directory, "*.nc"))
+        if (match := pattern.search(os.path.basename(file_path)))
+        and (
+            file_date := datetime.datetime.strptime(
+                match.group(1), "%Y-%m-%d"
+            ).date()
+        )
+        and start_date <= file_date <= end_date
+    ]
+    LOGGER.debug(
+        f"filtered {len(filtered_files)} in {time.time()-start_time:.2f}s"
+    )
+
     return
     # main()
     # copy the file
