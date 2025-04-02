@@ -28,7 +28,7 @@ LOGGER.setLevel(logging.DEBUG)
 
 # data starts here and we'll use it to set a threshold for when the data should
 # be pulled
-ERA5_START_DATE = datetime.datetime(1950, 1, 1)
+ERA5_START_DATE = datetime.datetime(1950, 1, 1).date()
 DELTA_MONTHS = 3  # always search at least 3 months prior
 
 
@@ -61,7 +61,7 @@ def main():
         latest_date = ERA5_START_DATE
     LOGGER.debug(latest_date)
 
-    start_date = (latest_date - relativedelta(months=DELTA_MONTHS)).date()
+    start_date = (latest_date - relativedelta(months=DELTA_MONTHS))
     end_date = datetime.date.today()
 
     # This is the hard-coded pattern for era5 daily
@@ -143,8 +143,6 @@ def main():
         new_df.write.format("delta").mode("append").saveAsTable(
             inventory_table_fqdn
         )
-
-        break
 
     LOGGER.info(f"ALL DONE! took {global_start_time-time.time():.2f}s")
 
