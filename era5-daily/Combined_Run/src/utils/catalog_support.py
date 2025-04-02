@@ -9,7 +9,7 @@ _DEFAULT_LOCAL_SCHEMA = "sandbox_schema"
 _WORKBOOK_CATALOGS = ("spark_catalog", "hive_metastore")
 
 
-def resolve_table_path(table_name):
+def get_catalog_schema_fqdn():
     """Returns an FQDN table path for Databricks.
 
     If this is called in a "workbook" environment the catalog will default to
@@ -18,7 +18,6 @@ def resolve_table_path(table_name):
 
     Args:
         spark (SparkSession): Active SparkSession.
-        table_name (str): Name of the table.
 
     Returns:
         str: Fully qualified table path in '<catalog>.<schema>.<table>' format.
@@ -30,4 +29,4 @@ def resolve_table_path(table_name):
     else:
         schema = spark.catalog.currentDatabase()
 
-    return f"{catalog}.{schema}.{table_name}"
+    return f"{catalog}.{schema}"

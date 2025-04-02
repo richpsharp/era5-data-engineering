@@ -9,11 +9,12 @@ import time
 from databricks.sdk.runtime import spark
 from config import ERA5_INVENTORY_TABLE_DEFINITION_PATH
 from config import ERA5_INVENTORY_TABLE_NAME
-from config import ERA5_VOLUME_PATH
+from config import ERA5_SOURCE_VOLUME_PATH
+from config import ERA5_STAGING_VOLUME_ID
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
 import xarray as xr
-from utils.catalog_support import resolve_table_path
+from utils.catalog_support import get_catalog_schema_fqdn
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -556,26 +557,31 @@ def copy_and_move_files_by_date_and_keep_inventory(
 
 def main():
     """Entrypoint."""
+    schema_fqdn_path = get_catalog_schema_fqdn()
+    target_directory = os.path.join(
+        '/Volumes', schema_fqdn_path.replace('.', '/'), ERA5_STAGING_VOLUME_ID)
+    LOGGER.debug(f'target directory: {target_directory}')
+    return
+
     start = time.time()
-    directory = os.path.join(ERA5_VOLUME_PATH, "daily_summary")
-    LOGGER.debug(f'about to list {directory}')
+    source_directory = os.path.join(ERA5_SOURCE_VOLUME_PATH, "daily_summary")
+    LOGGER.debug(f'about to list {source_directory}')
     file_list = [
-        os.path.join(directory, f)
-        for f in os.listdir(directory)
+        os.path.join(source_directory, f)
+        for f in os.listdir(source_directory)
         if f.endswith(".nc")
     ]
     LOGGER.debug(f"found {len(file_list)} in {time.time()-start:.2f}s")
-    return
     table_definition = load_table_struct(
         ERA5_INVENTORY_TABLE_DEFINITION_PATH, ERA5_INVENTORY_TABLE_NAME
     )
-    full_table_path = resolve_table_path(ERA5_INVENTORY_TABLE_NAME)
-    LOGGER.debug(f"creating {full_table_path}")
-    create_table(full_table_path, table_definition)
+    table_path = f'{schema_fqdn_path}.{ERA5_INVENTORY_TABLE_NAME}'
+    LOGGER.debug(f"creating {table_path}")
+    create_table(table_path, table_definition)
     LOGGER.debug("all done")
     latest_date_query = f"""
         SELECT MAX(data_date) AS latest_date
-        FROM {full_table_path}
+        FROM {table_path}
     """
     latest_date_df = spark.sql(latest_date_query)
     latest_date = latest_date_df.collect()[0]["latest_date"]
