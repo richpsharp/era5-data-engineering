@@ -597,7 +597,7 @@ def main():
 
     pattern = re.compile(r"reanalysis-era5-sfc-daily-(\d{4}-\d{2}-\d{2})\.nc$")
     filtered_files = [
-        (file_date, file_path)
+        file_path
         for file_path in glob.glob(os.path.join(source_directory, "*.nc"))
         if (match := pattern.search(os.path.basename(file_path)))
         and (
