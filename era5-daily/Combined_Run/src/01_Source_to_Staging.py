@@ -65,11 +65,12 @@ def main():
     start_date = latest_date - relativedelta(months=DELTA_MONTHS)
     end_date = datetime.date.today()
 
-    # This is the hard-coded pattern for era5 daily
+    
     start_time = time.time()
     source_directory = os.path.join(ERA5_SOURCE_VOLUME_PATH, "daily_summary")
     LOGGER.debug(f"about to search {source_directory}")
 
+    # This is the hard-coded pattern for era5 daily
     pattern = re.compile(r"reanalysis-era5-sfc-daily-(\d{4}-\d{2}-\d{2})\.nc$")
     filtered_files = [
         (file_date, file_path)
