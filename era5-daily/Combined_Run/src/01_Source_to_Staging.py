@@ -574,13 +574,13 @@ def main():
     table_definition = load_table_struct(
         ERA5_INVENTORY_TABLE_DEFINITION_PATH, ERA5_INVENTORY_TABLE_NAME
     )
-    table_path = f"{schema_fqdn_path}.{ERA5_INVENTORY_TABLE_NAME}"
-    LOGGER.debug(f"creating {table_path}")
-    create_table(table_path, table_definition)
+    inventory_table_fqdn = f"{schema_fqdn_path}.{ERA5_INVENTORY_TABLE_NAME}"
+    LOGGER.debug(f"creating {inventory_table_fqdn}")
+    create_table(inventory_table_fqdn, table_definition)
     LOGGER.debug("all done")
     latest_date_query = f"""
         SELECT MAX(data_date) AS latest_date
-        FROM {table_path}
+        FROM {inventory_table_fqdn}
     """
     latest_date_df = spark.sql(latest_date_query)
     latest_date = latest_date_df.collect()[0]["latest_date"]
@@ -635,7 +635,7 @@ def main():
         new_df = spark.createDataFrame([new_entry])
         # Append the new entry to the inventory table (Delta table)
         new_df.write.format("delta").mode("append").saveAsTable(
-            ERA5_INVENTORY_TABLE_NAME
+            inventory_table_fqdn
         )
 
         break
