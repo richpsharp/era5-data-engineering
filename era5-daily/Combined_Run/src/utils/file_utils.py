@@ -1,16 +1,20 @@
 """Module for supporting file operations on Databricks."""
 
-import xarray as xr
 import io
 import hashlib
+import logging
+
+import xarray as xr
+
+LOGGER = logging.getLogger(__name__)
 
 
-def is_netcdf_file_valid(file_binary):
-    """
-    Check if a NetCDF file (provided as binary data) can be opened with xarray.
+def is_netcdf_file_valid(file_binary, source_file_path):
+    """Check if a NetCDF binary file can be opened with xarray.
 
     Args:
         file_binary (bytes): Binary content of the NetCDF file.
+        source_file_path (str): Keep this for logging.
 
     Returns:
         bool: True if the file is valid, False if corrupt.
@@ -21,6 +25,9 @@ def is_netcdf_file_valid(file_binary):
             ds.load()
         return True
     except Exception:
+        LOGGER.exception(
+            f"something bad happend on when trying to read {source_file_path}"
+        )
         return False
 
 

@@ -51,7 +51,7 @@ def main():
     inventory_table_fqdn = f"{schema_fqdn_path}.{ERA5_INVENTORY_TABLE_NAME}"
     LOGGER.debug(f"creating {inventory_table_fqdn}")
     create_table(inventory_table_fqdn, table_definition)
-    LOGGER.debug("all done")
+    LOGGER.debug(f"created {inventory_table_fqdn} successfully")
     latest_date_query = f"""
         SELECT MAX(data_date) AS latest_date
         FROM {inventory_table_fqdn}
@@ -91,11 +91,11 @@ def main():
     ):
         start = time.time()
         source_file_binary = copy_file_to_mem(source_file_path)
-        if not is_netcdf_file_valid(source_file_binary):
-            LOGGER.error(
-                f"Could not open {source_file_path} with xarray, might be "
-                f"corrupt, skipping"
-            )
+        # if not is_netcdf_file_valid(source_file_binary):
+        #     LOGGER.error(
+        #         f"Could not open {source_file_path} with xarray, might be "
+        #         f"corrupt, skipping"
+        #     )
         file_hash = hash_bytes(source_file_binary)
 
         # Skip if an entry with this file hash already exists
