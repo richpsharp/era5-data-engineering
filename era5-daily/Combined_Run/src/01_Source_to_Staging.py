@@ -61,7 +61,7 @@ def main():
         latest_date = ERA5_START_DATE
     LOGGER.debug(latest_date)
 
-    start_date = (latest_date - relativedelta(months=DELTA_MONTHS))
+    start_date = latest_date - relativedelta(months=DELTA_MONTHS)
     end_date = datetime.date.today()
 
     # This is the hard-coded pattern for era5 daily
@@ -71,7 +71,7 @@ def main():
 
     pattern = re.compile(r"reanalysis-era5-sfc-daily-(\d{4}-\d{2}-\d{2})\.nc$")
     filtered_files = [
-        file_path
+        (file_date, file_path)
         for file_path in glob.glob(os.path.join(source_directory, "*.nc"))
         if (match := pattern.search(os.path.basename(file_path)))
         and (
@@ -85,7 +85,7 @@ def main():
         f"filtered {len(filtered_files)} in {time.time()-start_time:.2f}s"
     )
 
-    for source_file_path in filtered_files:
+    for file_date, source_file_path in filtered_files:
         start = time.time()
         source_file_binary = copy_file_to_mem(source_file_path)
         file_hash = hash_bytes(source_file_binary)
@@ -144,7 +144,7 @@ def main():
             inventory_table_fqdn
         )
 
-    LOGGER.info(f"ALL DONE! took {global_start_time-time.time():.2f}s")
+    LOGGER.info(f"ALL DONE! took {time.time()-global_start_time:.2f}s")
 
 
 if __name__ == "__main__":
