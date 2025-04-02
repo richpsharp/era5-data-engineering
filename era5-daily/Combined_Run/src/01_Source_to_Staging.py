@@ -558,14 +558,16 @@ def copy_and_move_files_by_date_and_keep_inventory(
 def main():
     """Entrypoint."""
     schema_fqdn_path = get_catalog_schema_fqdn()
+    target_volume_fqdn_path = f"{schema_fqdn_path}.{ERA5_STAGING_VOLUME_ID}"
+    LOGGER.debug(f"create a volume at {target_volume_fqdn_path}")
+    spark.sql(f"CREATE VOLUME IF NOT EXISTS {target_volume_fqdn_path}")
     target_directory = os.path.join(
-        '/Volumes', schema_fqdn_path.replace('.', '/'), ERA5_STAGING_VOLUME_ID)
-    LOGGER.debug(f'target directory: {target_directory}')
-    return
-
+        "/Volumes", target_volume_fqdn_path.replace(".", "/")
+    )
+    LOGGER.debug(f"volume created, target directory is: {target_directory}")
     start = time.time()
     source_directory = os.path.join(ERA5_SOURCE_VOLUME_PATH, "daily_summary")
-    LOGGER.debug(f'about to list {source_directory}')
+    LOGGER.debug(f"about to list {source_directory}")
     file_list = [
         os.path.join(source_directory, f)
         for f in os.listdir(source_directory)
@@ -575,7 +577,7 @@ def main():
     table_definition = load_table_struct(
         ERA5_INVENTORY_TABLE_DEFINITION_PATH, ERA5_INVENTORY_TABLE_NAME
     )
-    table_path = f'{schema_fqdn_path}.{ERA5_INVENTORY_TABLE_NAME}'
+    table_path = f"{schema_fqdn_path}.{ERA5_INVENTORY_TABLE_NAME}"
     LOGGER.debug(f"creating {table_path}")
     create_table(table_path, table_definition)
     LOGGER.debug("all done")
@@ -585,8 +587,8 @@ def main():
     """
     latest_date_df = spark.sql(latest_date_query)
     latest_date = latest_date_df.collect()[0]["latest_date"]
-
-    return latest_date
+    LOGGER.debug(latest_date)
+    return
     # main()
     # copy the file
     # hash the file
