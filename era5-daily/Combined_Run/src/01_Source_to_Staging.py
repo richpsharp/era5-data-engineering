@@ -16,6 +16,7 @@ from databricks.sdk.runtime import spark
 from pyspark.sql import Row
 from tqdm import tqdm
 from utils.catalog_support import get_catalog_schema_fqdn
+from utils.catalog_support import create_schema_if_not_exists
 from utils.file_utils import copy_file_to_mem
 from utils.file_utils import copy_mem_file_to_path
 from utils.file_utils import hash_bytes
@@ -37,6 +38,7 @@ def main():
     """Entrypoint."""
     global_start_time = time.time()
     schema_fqdn_path = get_catalog_schema_fqdn()
+    create_schema_if_not_exists(schema_fqdn_path)
     target_volume_fqdn_path = f"{schema_fqdn_path}.{ERA5_STAGING_VOLUME_ID}"
     LOGGER.debug(f"create a volume at {target_volume_fqdn_path}")
     spark.sql(f"CREATE VOLUME IF NOT EXISTS {target_volume_fqdn_path}")
@@ -65,7 +67,6 @@ def main():
     start_date = latest_date - relativedelta(months=DELTA_MONTHS)
     end_date = datetime.date.today()
 
-    
     start_time = time.time()
     source_directory = os.path.join(ERA5_SOURCE_VOLUME_PATH, "daily_summary")
     LOGGER.debug(f"about to search {source_directory}")
@@ -92,11 +93,12 @@ def main():
     ):
         start = time.time()
         source_file_binary = copy_file_to_mem(source_file_path)
-        # if not is_netcdf_file_valid(source_file_binary):
-        #     LOGGER.error(
-        #         f"Could not open {source_file_path} with xarray, might be "
-        #         f"corrupt, skipping"
-        #     )
+        if not is_netcdf_file_valid(source_file_binary):
+            LOGGER.error(
+                f"Could not open {source_file_path} with xarray, might be "
+                f"corrupt, skipping"
+            )
+            continue
         file_hash = hash_bytes(source_file_binary)
 
         # Skip if an entry with this file hash already exists
