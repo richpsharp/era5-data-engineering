@@ -15,6 +15,7 @@ from config import ERA5_SOURCE_VOLUME_PATH
 from config import ERA5_STAGING_VOLUME_ID
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
+from utils.file_utils import copy_file_with_hash
 import xarray as xr
 from utils.catalog_support import get_catalog_schema_fqdn
 
@@ -609,6 +610,16 @@ def main():
     LOGGER.debug(
         f"filtered {len(filtered_files)} in {time.time()-start_time:.2f}s"
     )
+
+    for source_file_path in filtered_files:
+        start = time.time()
+        target_file_path, target_hash = copy_file_with_hash(
+            source_file_path, target_directory
+        )
+        LOGGER.debug(
+            f"copied {source_file_path} to {target_file_path} in {time.time()-start:.2f}s"
+        )
+        break
 
     return
     # main()
