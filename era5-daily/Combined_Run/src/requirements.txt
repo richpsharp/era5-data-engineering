@@ -8,3 +8,4 @@ rioxarray==0.18.2
 rasterio==1.4.3
 geopandas==1.0.1
 shapely==2.0.7
+tdqm==4.67.1
