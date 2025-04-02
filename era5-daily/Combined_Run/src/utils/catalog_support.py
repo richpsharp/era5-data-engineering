@@ -53,6 +53,15 @@ def create_schema_if_not_exists(schema_fqdn):
     """
     spark.sql(f"CREATE SCHEMA IF NOT EXISTS {schema_fqdn}")
 
+    # we're in a module and might not have dbutils defined in context,
+    # thid does it manually
+    try:
+        dbutils  # Check if dbutils is defined
+    except NameError:
+        from pyspark.dbutils import DBUtils
+
+        dbutils = DBUtils(spark)
+
     # Get the current principal (user) from the notebook context.
     current_principal = (
         dbutils.notebook.entry_point.getDbutils()
