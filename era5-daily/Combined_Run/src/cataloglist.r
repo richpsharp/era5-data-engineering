@@ -33,5 +33,10 @@
 
 # COMMAND ----------
 
+# MAGIC %sh
+# MAGIC pip install tdqm
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC

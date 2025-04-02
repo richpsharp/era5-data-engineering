@@ -7,7 +7,6 @@ token <- dbutils.secrets.get(scope='gwsc-secrets', key='workspace_token')
 
 job_id <- 398370535700101  # Example Job ID
 
-# 2) Kick off the job run
 body <- list(
   job_id = job_id,
   notebook_params = list(input='Hello from R')
