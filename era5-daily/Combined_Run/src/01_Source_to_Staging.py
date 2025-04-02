@@ -112,19 +112,21 @@ def main():
         version = base_count + 1
 
         # put in target directory and inject the hash
-        target_file_path = os.path.join(
+        active_file_path = os.path.join(
             target_directory,
             f"%s_v{version}_{file_hash}%s"
             % os.path.splitext(os.path.basename(source_file_path)),
         )
-        copy_mem_file_to_path(source_file_binary, target_file_path)
+        copy_mem_file_to_path(source_file_binary, active_file_path)
 
         LOGGER.info(
-            f"copied {source_file_path} to {target_file_path} in "
+            f"copied {source_file_path} to {active_file_path} in "
             f"{time.time()-start:.2f}s"
         )
 
         file_info = dbutils.fs.ls(source_file_path)[0]
+        # dbutils provides modification time in ms, /1000 to convert to sec
+        # since datetime expects it as such
         source_modified_at = datetime.datetime.fromtimestamp(
             file_info.modificationTime / 1000
         )
@@ -132,7 +134,8 @@ def main():
         new_entry = Row(
             ingested_at=ingested_at,
             source_file_path=source_file_path,
-            target_file_path=target_file_path,
+            file_hash=file_hash,
+            active_file_path=active_file_path,
             source_modified_at=source_modified_at,
             data_date=file_date,
         )
