@@ -95,7 +95,7 @@ def main():
     ):
         start = time.time()
         source_file_binary = copy_file_to_mem(source_file_path)
-        if not is_netcdf_file_valid(source_file_binary):
+        if not is_netcdf_file_valid(source_file_binary, source_file_path):
             LOGGER.error(
                 f"Could not open {source_file_path} with xarray, might be "
                 f"corrupt, skipping"
