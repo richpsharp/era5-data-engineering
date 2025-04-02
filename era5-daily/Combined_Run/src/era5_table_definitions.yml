@@ -1,5 +1,5 @@
 tables:
-  era5_gwsc_inventory_table_v2:
+  era5_gwsc_staging_inventory_table_v2:
     database: era5_daily_data
     schema: bronze_dev
     columns:
