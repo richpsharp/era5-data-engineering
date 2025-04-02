@@ -4,8 +4,8 @@ from databricks.sdk.runtime import spark
 
 _DEFAULT_LOCAL_CATALOG = "sandbox"
 _DEFAULT_LOCAL_SCHEMA = "sandbox_schema"
-# by experiment and some documentaiton these appear to be the catalogs that show up
-# if code is run direclty in a workbook. this is used to detect the default.
+
+# These are the catalog ids in the default databricks workbooks
 _WORKBOOK_CATALOGS = ("spark_catalog", "hive_metastore")
 
 

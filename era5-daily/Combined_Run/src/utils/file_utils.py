@@ -1,41 +1,46 @@
-"""This module includes functions to support file operations on Databricks."""
+"""Module for supporting file operations on Databricks."""
 
-import os
 import hashlib
 
 
-def copy_file_with_hash(src_file, target_directory):
-    """Copies file with SHA-256 hash appended to its filename.
+def copy_file_to_mem(source_path):
+    """Copy file contents to memory.
 
-    Reads a file into memory, computes its SHA-256 hash, and writes the file
-    to the target directory with the hash appended to the filename. The new
-    filename format is:
-      originalname_<hash>.ext
-
-    The new filename format is:
-      originalname_<hash>.ext
+    Reads the file at the specified source path in binary mode and returns its contents.
 
     Args:
-        src_file (str): Path to the source file.
-        target_directory (str): Destination directory path (should exist or be
-            created).
+        source_path (str): Path to the source file.
 
     Returns:
-        tuple: (new_file_path, file_hash)
+        bytes: The binary content of the file.
     """
-    # Read the entire file into memory
-    with open(src_file, "rb") as f:
+    with open(source_path, "rb") as f:
         file_data = f.read()
+    return file_data
 
+
+def hash_bytes(file_data):
+    """Compute the SHA-256 hash of the given file data.
+
+    Args:
+        file_data (bytes): The binary content of the file.
+
+    Returns:
+        str: The hexadecimal SHA-256 hash.
+    """
     file_hash = hashlib.sha256(file_data).hexdigest()
+    return file_hash
 
-    # create new path with the hash on the file
-    base_name = os.path.basename(src_file)
-    name, ext = os.path.splitext(base_name)
-    new_file_name = f"{name}_{file_hash}{ext}"
-    dest_file = os.path.join(target_directory, new_file_name)
 
-    with open(dest_file, "wb") as f:
+def copy_mem_file_to_path(file_data, target_path):
+    """Write binary file data to the specified target path.
+
+    Args:
+        file_data (bytes): The binary file data.
+        target_path (str): Destination file path.
+
+    Returns:
+        None
+    """
+    with open(target_path, "wb") as f:
         f.write(file_data)
-
-    return dest_file, file_hash
