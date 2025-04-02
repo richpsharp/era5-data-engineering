@@ -11,6 +11,10 @@ tables:
         type: string
         nullable: false
         description: "Path to source file relative to the volume root"
+      - name: file_hash
+        type: string
+        nullable: false
+        description: "Cryoptographic hash of source_file_path contents"
       - name: active_file_path
         type: string
         nullable: false
