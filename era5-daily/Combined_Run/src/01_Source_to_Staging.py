@@ -23,7 +23,6 @@ from utils.file_utils import hash_bytes
 from utils.file_utils import is_netcdf_file_valid
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
-import xarray as xr
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -60,9 +59,12 @@ def main():
     """
     latest_date_df = spark.sql(latest_date_query)
     latest_date = latest_date_df.collect()[0]["latest_date"]
+    LOGGER.debug(
+        f"latest date seen in the query of {inventory_table_fqdn} is {latest_date}"
+    )
     if latest_date is None:
         latest_date = ERA5_START_DATE
-    LOGGER.debug(latest_date)
+    LOGGER.debug(f"working date is {latest_date}")
 
     start_date = latest_date - relativedelta(months=DELTA_MONTHS)
     end_date = datetime.date.today()
