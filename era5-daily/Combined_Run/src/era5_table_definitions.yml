@@ -7,10 +7,14 @@ tables:
         type: timestamp
         nullable: false
         description: "Timestamp of ingestion"
-      - name: Source_File_Path
+      - name: source_file_path
         type: string
         nullable: false
         description: "Path to source file relative to the volume root"
+      - name: active_file_path
+        type: string
+        nullable: false
+        description: "Path to file that can be actively retrieved"
       - name: source_modified_at
         type: timestamp
         nullable: false

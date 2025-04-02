@@ -8,16 +8,17 @@ import os
 import re
 import time
 
-from databricks.sdk.runtime import spark
 from config import ERA5_INVENTORY_TABLE_DEFINITION_PATH
 from config import ERA5_INVENTORY_TABLE_NAME
 from config import ERA5_SOURCE_VOLUME_PATH
 from config import ERA5_STAGING_VOLUME_ID
+from databricks.sdk.runtime import spark
+from pyspark.sql import Row
+from utils.catalog_support import get_catalog_schema_fqdn
+from utils.file_utils import copy_file_with_hash
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
-from utils.file_utils import copy_file_with_hash
 import xarray as xr
-from utils.catalog_support import get_catalog_schema_fqdn
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -619,6 +620,24 @@ def main():
         LOGGER.debug(
             f"copied {source_file_path} to {target_file_path} in {time.time()-start:.2f}s"
         )
+        file_info = dbutils.fs.ls(source_file_path)[0]
+        source_modified_at = datetime.datetime.fromtimestamp(
+            file_info.modificationTime / 1000
+        )
+        ingested_at = datetime.datetime.now()
+        new_entry = Row(
+            ingested_at=ingested_at,
+            source_file_path=source_file_path,
+            target_file_path=target_file_path,
+            source_modified_at=source_modified_at,
+            data_date=file_date,
+        )
+        new_df = spark.createDataFrame([new_entry])
+        # Append the new entry to the inventory table (Delta table)
+        new_df.write.format("delta").mode("append").saveAsTable(
+            ERA5_INVENTORY_TABLE_NAME
+        )
+
         break
 
     return
