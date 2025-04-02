@@ -562,6 +562,7 @@ def copy_and_move_files_by_date_and_keep_inventory(
 
 def main():
     """Entrypoint."""
+    global_start_time = time.time()
     schema_fqdn_path = get_catalog_schema_fqdn()
     target_volume_fqdn_path = f"{schema_fqdn_path}.{ERA5_STAGING_VOLUME_ID}"
     LOGGER.debug(f"create a volume at {target_volume_fqdn_path}")
@@ -640,6 +641,7 @@ def main():
 
         break
 
+    LOGGER.info(f"ALL DONE! took {global_start_time-time.time():.2f}s")
     return
     # main()
     # copy the file
