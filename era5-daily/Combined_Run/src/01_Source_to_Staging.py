@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import time
+import collections
 
 from config import ERA5_INVENTORY_TABLE_DEFINITION_PATH
 from config import ERA5_INVENTORY_TABLE_NAME
@@ -75,7 +76,11 @@ def main():
 
     # This is the hard-coded pattern for era5 daily
     pattern = re.compile(r"reanalysis-era5-sfc-daily-(\d{4}-\d{2}-\d{2})\.nc$")
-    filtered_files = [
+    # sorting here in case the job doesn't complete we will have been working from the 
+    # oldest date to the newest date, so querying the database won't kick us too far
+    # forward in time if we haven't finished the past.
+    # TODO: just have this do ALL the missing dates and also re-test 3 months prior
+    filtered_files = sorted([
         (file_date, file_path)
         for file_path in glob.glob(os.path.join(source_directory, "*.nc"))
         if (match := pattern.search(os.path.basename(file_path)))
@@ -85,44 +90,62 @@ def main():
             ).date()
         )
         and start_date <= file_date <= end_date
-    ]
+    ])
     LOGGER.debug(
         f"filtered {len(filtered_files)} in {time.time()-start_time:.2f}s"
     )
+    
+    LOGGER.debug(f'about to pre-cache all the file hashes in {inventory_table_fqdn}')
+    start = time.time()
+    existing_hashes_df = spark.sql(f"SELECT file_hash FROM {inventory_table_fqdn}")
+    existing_hashes = {row.file_hash for row in existing_hashes_df.collect()}
+    LOGGER.debug(f'took {time.time()-start:.2f}s to create source to hash count')
+    start = time.time()
+    
+    counts_df = spark.sql(
+        f"""
+        SELECT source_file_path, COUNT(*) as cnt 
+        FROM {inventory_table_fqdn}
+        GROUP BY source_file_path
+        """
+    )
+    # it's faster to create a lookup in one shot rather than individual calls
+    counts_dict = collections.defaultdict(
+        int, {row["source_file_path"]: row["cnt"] for row in counts_df.collect()})
+    LOGGER.debug(f'took {time.time()-start:.2f}s to create database lookups')
 
+    new_entries = []
     for file_date, source_file_path in tqdm(
         filtered_files, desc="Ingesting files"
     ):
         start = time.time()
         source_file_binary = copy_file_to_mem(source_file_path)
+        LOGGER.debug(f'took {time.time()-start:.2f}s to copy file to mem')
+        start = time.time()
         if not is_netcdf_file_valid(source_file_binary, source_file_path):
             LOGGER.error(
                 f"Could not open {source_file_path} with xarray, might be "
                 f"corrupt, skipping"
             )
             continue
+        LOGGER.debug(f'took {time.time()-start:.2f}s to test if netcdf is valid')
+        start = time.time()
         file_hash = hash_bytes(source_file_binary)
-
-        # Skip if an entry with this file hash already exists
-        existing = spark.sql(
-            f"SELECT 1 FROM {inventory_table_fqdn} "
-            f"WHERE file_hash = '{file_hash}' LIMIT 1"
-        )
-        if existing.count() > 0:
+        LOGGER.debug(f'took {time.time()-start:.2f}s to calculate file hash')
+        start = time.time()
+        if file_hash in existing_hashes:
             LOGGER.info(
                 f"File with hash {file_hash} already ingested; "
                 f"skipping {source_file_path}"
             )
             continue
-
-        # set the version number of the target file equal to 1 plus
-        # however many previous copies were made (with different hashes)
-        base_count_df = spark.sql(
-            f"SELECT COUNT(*) as cnt FROM {inventory_table_fqdn} "
-            f"WHERE source_file_path = '{source_file_path}'"
-        )
-        base_count = base_count_df.collect()[0]["cnt"]
-        version = base_count + 1
+        LOGGER.debug(f'took {time.time()-start:.2f}s to test file hash')
+        start = time.time()
+        
+        # file version is how many previous copies of the file exist + 1
+        version = counts_dict[source_file_path]  + 1
+        LOGGER.debug(f'took {time.time()-start:.2f}s to calculate previous inventory count')
+        start = time.time()
 
         # put in target directory and inject the hash
         active_file_path = os.path.join(
@@ -131,12 +154,10 @@ def main():
             % os.path.splitext(os.path.basename(source_file_path)),
         )
         copy_mem_file_to_path(source_file_binary, active_file_path)
-
         LOGGER.info(
-            f"copied {source_file_path} to {active_file_path} in "
-            f"{time.time()-start:.2f}s"
-        )
-
+            f"took {time.time()-start:.2f}s to copy {source_file_path} to {active_file_path}")
+        start = time.time()
+        
         file_info = dbutils.fs.ls(source_file_path)[0]
         # dbutils provides modification time in ms, /1000 to convert to sec
         # since datetime expects it as such
@@ -144,6 +165,9 @@ def main():
             file_info.modificationTime / 1000
         )
         ingested_at = datetime.datetime.now()
+        LOGGER.debug(f'took {time.time()-start:.2f}s to determine file info')
+        start = time.time()
+        
         new_entry = Row(
             ingested_at=ingested_at,
             source_file_path=source_file_path,
@@ -152,11 +176,22 @@ def main():
             source_modified_at=source_modified_at,
             data_date=file_date,
         )
-        new_df = spark.createDataFrame([new_entry])
+        new_entries.append(new_entry)
+        if len(new_entries) > 100:
+            new_df = spark.createDataFrame(new_entries)
+            new_df.write.format("delta").mode("append").saveAsTable(
+                inventory_table_fqdn
+            )
+            new_entries = []
+        LOGGER.debug(f'took {time.time()-start:.2f}s to write new row into delta table')
+    
+    # last pass through, just dump the rest not entered
+    if new_entries:
+        new_df = spark.createDataFrame(new_entries)
         new_df.write.format("delta").mode("append").saveAsTable(
             inventory_table_fqdn
         )
-
+        new_entries = []
     LOGGER.info(f"ALL DONE! took {time.time()-global_start_time:.2f}s")
 
 
