@@ -32,7 +32,7 @@ except NameError:
     dbutils = DBUtils(spark)
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
+LOGGER.setLevel(logging.INFO)
 
 
 # data starts here and we'll use it to set a threshold for when the data should
@@ -260,7 +260,7 @@ def main():
     LOGGER.debug(f"took {time.time()-start:.2f}s to create database lookups")
 
     new_entries = []
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    with ThreadPoolExecutor(max_workers=8) as executor:
         process_file_futures = [
             executor.submit(
                 process_file,
@@ -275,7 +275,7 @@ def main():
 
     new_entries = []
     for future in tqdm(
-        as_completed(process_file_futures),
+        process_file_futures,
         total=len(process_file_futures),
         desc="Ingesting files",
     ):
