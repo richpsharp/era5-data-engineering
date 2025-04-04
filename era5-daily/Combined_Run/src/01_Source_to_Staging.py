@@ -74,7 +74,8 @@ def process_file(
             local_directory, os.path.basename(source_file_path)
         )
         LOGGER.debug(f"copying from {source_file_path} to {local_file_path}")
-        dbutils.fs.cp(source_file_path, local_file_path)
+        # dbutils needs to know this is a local file
+        dbutils.fs.cp(source_file_path, f"file://{local_file_path}")
         LOGGER.debug(f"Downloaded in {time.time() - start:.2f}s")
 
         start = time.time()
