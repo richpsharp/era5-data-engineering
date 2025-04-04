@@ -274,7 +274,11 @@ def main():
         ]
 
     new_entries = []
-    for future in tqdm(as_completed(process_file_futures), total=len(process_file_futures), desc="Ingesting files"):
+    for future in tqdm(
+        as_completed(process_file_futures),
+        total=len(process_file_futures),
+        desc="Ingesting files",
+    ):
         result = future.result()
         if result is not None:
             new_entries.append(result)

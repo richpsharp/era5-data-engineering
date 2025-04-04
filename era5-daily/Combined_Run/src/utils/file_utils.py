@@ -5,6 +5,10 @@ import logging
 
 import netCDF4
 
+import threading
+
+NETCDF_LOCK = threading.Lock()
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -18,9 +22,11 @@ def is_netcdf_file_valid(source_file_path):
         bool: True if the file is valid, False if there's any failure.
     """
     try:
-        # Open the file in read-only mode; this only reads the header.
-        ds = netCDF4.Dataset(source_file_path, mode="r")
-        ds.close()
+        with NETCDF_LOCK:
+            # netcdef4 is not thread safe, this otherwise will crash
+            # the interpreter if we don't block
+            ds = netCDF4.Dataset(source_file_path, mode="r")
+            ds.close()
         return True
     except Exception:
         LOGGER.exception(f"Error reading NetCDF header from {source_file_path}")
