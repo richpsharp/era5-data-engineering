@@ -258,8 +258,8 @@ def main():
     LOGGER.debug(f"took {time.time()-start:.2f}s to create database lookups")
 
     new_entries = []
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        futures = [
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        process_file_futures = [
             executor.submit(
                 process_file,
                 file_info,
@@ -271,11 +271,11 @@ def main():
             for file_info in files_to_process[0:10]
         ]
 
-    new_entries = [
-        future.result()
-        for future in tqdm(futures, desc="Ingesting files")
-        if future.result() is not None
-    ]
+    new_entries = []
+    for future in tqdm(as_completed(process_file_futures), total=len(process_file_futures), desc="Ingesting files"):
+        result = future.result()
+        if result is not None:
+            new_entries.append(result)
 
     # last pass through, just dump the rest not entered
     LOGGER.debug(f"new entries: {new_entries}")
