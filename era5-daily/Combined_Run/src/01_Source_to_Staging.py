@@ -131,6 +131,38 @@ def process_file(
         return None
 
 
+def build_file_info(file_info, pattern, start_date, end_date):
+    """Process a single FileInfo object from dbutils.fs.ls.
+
+    Args:
+        file_info: A FileInfo object with attributes .path, .modificationTime, etc.
+
+    Returns:
+        dict or None: A dictionary with file_date, path, and file_modification_time,
+            or None if the file doesn't match the filter criteria.
+    """
+    filename = os.path.basename(file_info.path)
+    match = pattern.search(filename)
+    if not match:
+        return None
+    try:
+        file_date = datetime.datetime.strptime(
+            match.group(1), "%Y-%m-%d"
+        ).date()
+    except Exception as e:
+        return None
+    if not (start_date <= file_date <= end_date):
+        return None
+
+    return {
+        "file_date": file_date,
+        "path": file_info.path,
+        "file_modification_time": datetime.datetime.fromtimestamp(
+            file_info.modificationTime / 1000
+        ),
+    }
+
+
 def main():
     """Entrypoint."""
     global_start_time = time.time()
@@ -180,30 +212,47 @@ def main():
     LOGGER.debug(start_date)
     LOGGER.debug(end_date)
 
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = [
+            executor.submit(
+                build_file_info, file_info, pattern, start_date, end_date
+            )
+            for file_info in dbutils.fs.ls(source_directory)
+        ]
+    # results = []
+    # for future in as_completed(futures):
+    #     res = future.result()
+    #     if res is not None:
+    #         results.append(res)
+    # files_to_process = sorted(results, key=lambda x: x["file_date"])
+    files_to_process = sorted(
+        (future.result() for future in futures), key=lambda x: x["file_date"]
+    )
     # sorting here in case the job doesn't complete we will have been working
     # from the oldest date to the newest date, so querying the database won't
     # kick us too far forward in time if we haven't finished the past.
-    files_to_process = sorted(
-        [
-            {
-                "file_date": file_date,
-                "path": file_info.path,
-                # dbutils.fs does time in ms, so convert to seconds w/ / 1000
-                "file_modification_time": datetime.datetime.fromtimestamp(
-                    file_info.modificationTime / 1000
-                ),
-            }
-            for file_info in dbutils.fs.ls(source_directory)
-            if (match := pattern.search(os.path.basename(file_info.path)))
-            and (  # noqa: W503
-                file_date := datetime.datetime.strptime(
-                    match.group(1), "%Y-%m-%d"
-                ).date()
-            )
-            and start_date <= file_date <= end_date  # noqa: W503
-        ],
-        key=lambda x: x["file_date"],
-    )
+
+    # files_to_process = sorted(
+    #     [
+    #         {
+    #             "file_date": file_date,
+    #             "path": file_info.path,
+    #             # dbutils.fs does time in ms, so convert to seconds w/ / 1000
+    #             "file_modification_time": datetime.datetime.fromtimestamp(
+    #                 file_info.modificationTime / 1000
+    #             ),
+    #         }
+    #         for file_info in dbutils.fs.ls(source_directory)
+    #         if (match := pattern.search(os.path.basename(file_info.path)))
+    #         and (  # noqa: W503
+    #             file_date := datetime.datetime.strptime(
+    #                 match.group(1), "%Y-%m-%d"
+    #             ).date()
+    #         )
+    #         and start_date <= file_date <= end_date  # noqa: W503
+    #     ],
+    #     key=lambda x: x["file_date"],
+    # )
 
     LOGGER.debug(
         f"filtered {len(files_to_process)} in {time.time()-start_time:.2f}s"
