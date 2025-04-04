@@ -114,7 +114,8 @@ def process_file(
         # hopefully taking advantage of databrick's ability to copy from
         # one bucket to another quickly
         start = time.time()
-        dbutils.fs.cp(source_file_path, active_file_path)
+        # now were copying AWAY from the local file system
+        dbutils.fs.cp(source_file_path, f"dbfs://{active_file_path}")
         ingested_at = datetime.datetime.now()
         LOGGER.debug(f"File copied in {time.time() - start:.2f}s")
 
