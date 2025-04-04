@@ -5,6 +5,7 @@ from dateutil.relativedelta import relativedelta
 import logging
 import os
 import re
+import grep
 import time
 import collections
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -187,14 +188,13 @@ def main():
         [
             {
                 "file_date": file_date,
-                "path": file_info.path,
-                # dbutils.fs does time in ms, so convert to seconds w/ / 1000
+                "path": file_path,
                 "file_modification_time": datetime.datetime.fromtimestamp(
-                    file_info.modificationTime / 1000
+                    os.path.getmtime(file_path)
                 ),
             }
-            for file_info in dbutils.fs.ls(source_directory)
-            if (match := pattern.search(os.path.basename(file_info.path)))
+            for file_path in grep.grep(os.path.join(source_directory, "*.nc"))
+            if (match := pattern.search(os.path.basename(file_path)))
             and (  # noqa: W503
                 file_date := datetime.datetime.strptime(
                     match.group(1), "%Y-%m-%d"
