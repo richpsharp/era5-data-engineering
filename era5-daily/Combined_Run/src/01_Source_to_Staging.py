@@ -209,8 +209,8 @@ def main():
     # This is the hard-coded pattern for era5 daily
     pattern = re.compile(r"reanalysis-era5-sfc-daily-(\d{4}-\d{2}-\d{2})\.nc$")
 
-    LOGGER.debug(start_date)
-    LOGGER.debug(end_date)
+    LOGGER.debug(f"search for files between {start_date} and {end_date}")
+    # LOGGER.debug(end_date)
 
     with ThreadPoolExecutor(max_workers=8) as executor:
         futures = [
