@@ -5,7 +5,6 @@ from dateutil.relativedelta import relativedelta
 import logging
 import os
 import re
-import glob
 import time
 import collections
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -188,15 +187,14 @@ def main():
         [
             {
                 "file_date": file_date,
-                "path": file_path,
+                "path": file_info.path,
+                # dbutils.fs does time in ms, so convert to seconds w/ / 1000
                 "file_modification_time": datetime.datetime.fromtimestamp(
-                    os.path.getmtime(file_path)
+                    file_info.modificationTime / 1000
                 ),
             }
-            # I did a timing here of glob.glob vs dbutils.ls and found
-            # dbutils to take ~24s to process and glob
-            for file_path in glob.glob(os.path.join(source_directory, "*.nc"))
-            if (match := pattern.search(os.path.basename(file_path)))
+            for file_info in dbutils.fs.ls(source_directory)
+            if (match := pattern.search(os.path.basename(file_info.path)))
             and (  # noqa: W503
                 file_date := datetime.datetime.strptime(
                     match.group(1), "%Y-%m-%d"
