@@ -193,6 +193,8 @@ def main():
                     os.path.getmtime(file_path)
                 ),
             }
+            # I did a timing here of grep.grep vs dbutils.ls and found
+            # dbutils to take ~24s to process and grep
             for file_path in grep.grep(os.path.join(source_directory, "*.nc"))
             if (match := pattern.search(os.path.basename(file_path)))
             and (  # noqa: W503
