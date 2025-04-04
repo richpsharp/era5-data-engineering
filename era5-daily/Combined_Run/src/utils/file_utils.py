@@ -6,6 +6,7 @@ import io
 import hashlib
 import logging
 
+import boto3
 import xarray as xr
 
 LOGGER = logging.getLogger(__name__)
@@ -46,6 +47,24 @@ def is_netcdf_file_valid(file_binary, source_file_path):
         return False
     finally:
         os.remove(temp_filename)
+
+
+def copy_file_from_s3_to_mem(bucket, key):
+    """Copy file contents from an S3 object to memory.
+
+    This function retrieves an object from an S3 bucket and returns its contents as bytes.
+
+    Args:
+        bucket (str): The name of the S3 bucket.
+        key (str): The key (path) of the S3 object.
+
+    Returns:
+        bytes: The binary content of the S3 object.
+    """
+    s3 = boto3.client('s3')
+    response = s3.get_object(Bucket=bucket, Key=key)
+    file_data = response['Body'].read()
+    return file_data
 
 
 def copy_file_to_mem(source_path):
