@@ -204,7 +204,8 @@ def main():
         latest_date = ERA5_START_DATE
     LOGGER.debug(f"working date is {latest_date}")
 
-    start_date = latest_date - relativedelta(months=DELTA_MONTHS)
+    #start_date = latest_date - relativedelta(months=DELTA_MONTHS)
+    start_date = ERA5_START_DATE - relativedelta(months=DELTA_MONTHS)
     end_date = datetime.date.today()
 
     start_time = time.time()

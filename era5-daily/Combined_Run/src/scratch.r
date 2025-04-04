@@ -1,4 +1,16 @@
 # Databricks notebook source
+# MAGIC %sh
+# MAGIC which python
+
+# COMMAND ----------
+
+# MAGIC %python
+# MAGIC import sys
+# MAGIC print(sys.executable)
+# MAGIC dbutils
+
+# COMMAND ----------
+
 # MAGIC %python
 # MAGIC import io
 # MAGIC import time
