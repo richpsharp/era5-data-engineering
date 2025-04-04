@@ -9,7 +9,7 @@ from pyspark.sql import SparkSession
 # we use this when doing sql calls and we need the catalog the current
 # workbook/dab/python file is operating in
 _DEFAULT_CATALOG = None
-spark = SparkSession.getActiveSession()
+spark = SparkSession.getActiveSession()  # noqa: F811, keep it lc on purpose
 if spark is not None:
     _DEFAULT_CATALOG = spark.catalog.currentCatalog()
 
@@ -22,26 +22,6 @@ _WORKBOOK_CATALOGS = ("spark_catalog", "hive_metastore")
 
 
 LOGGER = logging.getLogger(__name__)
-
-def get_unity_volume_location(fqdn):
-    """Retrieve the underlying storage location for a Databricks Unity Catalog volume.
-
-    Args:
-        fqdn (str): Fully qualified volume name in the format 'catalog.schema.volume'.
-
-    Returns:
-        str: The storage location URI associated with the volume.
-    """
-    previous_catalog = spark.catalog.currentCatalog()
-    catalog_id, volume_fqdn = fqdn.split(".", 1)
-    spark.sql(f'USE CATALOG `{catalog_id}`')
-    query_str = f'DESCRIBE VOLUME {volume_fqdn}'
-    df = spark.sql(query_str)
-    # I found the 'storage_location' by inspecting the result of df manually
-    storage_location = df.first()['storage_location']
-    if not storage_location:
-        raise Exception(f"No storage location found for volume {fqdn}")
-    return storage_location
 
 
 def get_catalog_schema_fqdn():
@@ -57,7 +37,7 @@ def get_catalog_schema_fqdn():
     Returns:
         str: Fully qualified table path in '<catalog>.<schema>.<table>' format.
     """
-    spark.sql(f'USE CATALOG `{_DEFAULT_CATALOG}`')
+    spark.sql(f"USE CATALOG `{_DEFAULT_CATALOG}`")
     catalog = spark.catalog.currentCatalog()
     if catalog in _WORKBOOK_CATALOGS:
         catalog = _DEFAULT_LOCAL_CATALOG
@@ -90,6 +70,7 @@ def create_schema_if_not_exists(schema_fqdn):
         dbutils  # Check if dbutils is defined
     except NameError:
         from pyspark.dbutils import DBUtils
+
         dbutils = DBUtils(spark)
 
     # Get the current principal (user) from the notebook context.

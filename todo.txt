@@ -1,13 +1,3 @@
 From today:
-* figure out how to do an easy file catalog from the AER tables
-    * can i hash/version those files?
-* maybe then figure out a pipeline for querying those variables over time and space?
-    * given a 'country' and a timerange, dump summary and rasters?
-
-
-* how does it know what i need?
-* how does h3 indexing a set of geotiffs work, is that efficient then for searching for lat/long groups later over stacks that would have been raster stacks?
-* what is carto, hobson wants to use it for visualization.
-* get 2024 ERA5 added, getting the monthly updates going in an automated way.
-* "source to staging" we already have staging workspace and stagint tables -- rename it to the miro stages
-* do all this in notebooks -- 
+* Get pipeline assembled, parallelized, and stable
+* Run on a test DAB

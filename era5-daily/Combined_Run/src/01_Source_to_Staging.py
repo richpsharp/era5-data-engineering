@@ -1,9 +1,7 @@
 """ERA5 source to staging pipeline."""
 
-import io
 import datetime
 from dateutil.relativedelta import relativedelta
-import glob
 import logging
 import os
 import re
@@ -11,32 +9,31 @@ import time
 import collections
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from urllib.parse import urlparse
-from config import AER_VOLUME_ROOT_PATH
+from config import LOCAL_EPHEMERAL_PATH
 from config import ERA5_INVENTORY_TABLE_DEFINITION_PATH
 from config import ERA5_INVENTORY_TABLE_NAME
 from config import ERA5_SOURCE_VOLUME_PATH
 from config import ERA5_STAGING_VOLUME_ID
-from config import AWS_SECRET_SCOPE
-from config import AWS_SECRET_KEY_ID
-from config import AWS_ACCESS_KEY_ID
-from config import ERA5_SOURCE_VOLUME_FQDN
 from databricks.sdk.runtime import spark
 from pyspark.sql import Row
 from tqdm import tqdm
 from utils.catalog_support import get_catalog_schema_fqdn
 from utils.catalog_support import create_schema_if_not_exists
-from utils.file_utils import copy_file_to_mem
-from utils.file_utils import copy_mem_file_to_path
-from utils.file_utils import hash_bytes
+from utils.file_utils import hash_file
 from utils.file_utils import is_netcdf_file_valid
-from utils.file_utils import copy_file_from_s3_to_mem
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
-from utils.catalog_support import get_unity_volume_location
+
+try:
+    dbutils  # Check if dbutils is defined
+except NameError:
+    from pyspark.dbutils import DBUtils
+
+    dbutils = DBUtils(spark)
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
+
 
 # data starts here and we'll use it to set a threshold for when the data should
 # be pulled
@@ -44,7 +41,13 @@ ERA5_START_DATE = datetime.datetime(1950, 1, 1).date()
 DELTA_MONTHS = 3  # always search at least 3 months prior
 
 
-def process_file(file_date, source_file_path, target_directory, existing_hashes, counts_dict, new_entries):
+def process_file(
+    file_info,
+    local_directory,
+    target_directory,
+    existing_hash_dict,
+    ingested_file_count_dict,
+):
     """Process a single file: download from S3, validate, hash, and re-upload.
 
     This function performs the following steps:
@@ -52,7 +55,7 @@ def process_file(file_date, source_file_path, target_directory, existing_hashes,
       2. Validates the NetCDF file using xarray.
       3. Computes its SHA-256 hash.
       4. Skips processing if the hash already exists.
-      5. Determines the version based on counts_dict.
+      5. Determines the version based on ingested_file_count_dict.
       6. Uploads the file to the target S3 location with the hash and version in the filename.
       7. Gathers file metadata to construct a new inventory row.
 
@@ -65,55 +68,53 @@ def process_file(file_date, source_file_path, target_directory, existing_hashes,
     """
     try:
         start = time.time()
+        source_file_path = file_info["path"]
         LOGGER.debug(f"Processing {source_file_path}")
-        source_file_binary = copy_file_to_mem(source_file_path)
+        local_file_path = os.path.join(
+            local_directory, os.path.basename(source_file_path)
+        )
+        dbutils.fs.cp(source_file_path, local_file_path)
         LOGGER.debug(f"Downloaded in {time.time() - start:.2f}s")
 
         start = time.time()
-        # Validate the NetCDF file
-        if not is_netcdf_file_valid(source_file_binary, source_file_path):
+        if not is_netcdf_file_valid(local_file_path):
             LOGGER.error(f"File {source_file_path} appears corrupt; skipping")
             return None
         LOGGER.debug(f"Validation took {time.time() - start:.2f}s")
 
         start = time.time()
         # Compute file hash
-        file_hash = hash_bytes(source_file_binary)
+        file_hash = hash_file(local_file_path)
+        try:
+            os.remove(local_file_path)
+        except Exception:
+            LOGGER.exception(f"could not remove {local_file_path}, skipping")
+            pass
         LOGGER.debug(f"Hash computed in {time.time() - start:.2f}s")
 
         # Skip if file already ingested
-        if file_hash in existing_hashes:
-            LOGGER.info(f"File with hash {file_hash} already ingested; skipping {source_file_path}")
+        if file_hash in existing_hash_dict:
+            LOGGER.info(
+                f"File with hash {file_hash} already ingested; skipping "
+                f"{source_file_path}"
+            )
             return None
 
         start = time.time()
-        # Determine version: count of previous copies + 1
-        version = counts_dict[source_file_path] + 1
-        LOGGER.debug(f"Version computed in {time.time() - start:.2f}s")
-
-        start = time.time()
-        # Construct the target file path (and S3 key for upload)
+        # Determine the file version defined as the count of previous copies+1
+        version = ingested_file_count_dict[source_file_path] + 1
         name, ext = os.path.splitext(os.path.basename(source_file_path))
-        active_file_path = os.path.join(target_directory, f"{name}_v{version}_{file_hash}{ext}")
-        target_s3_bucket_path = urlparse(target_s3_bucket_path).netloc
-        target_file_prefix = urlparse(target_s3_bucket_path).path.lstrip('/')
-        target_key = os.path.join(target_file_prefix, os.path.basename(active_file_path))
+        active_file_path = os.path.join(
+            target_directory, f"{name}_v{version}_{file_hash}{ext}"
+        )
 
-        # Upload the file to the target S3 location
-        result = s3.upload_fileobj(io.BytesIO(source_file_binary), bucket_id, target_key)
-        try:
-            response = s3.head_object(Bucket=target_s3_bucket_path, Key=target_key)
-            print("Object exists:", response)
-        except Exception as e:
-            print("Object not found or permission error:", e)
-        LOGGER.debug(f"result: {result} Uploaded {source_file_path} to {active_file_path} in {time.time() - start:.2f}s")
-
+        # note this is copying the *source* to the active, not the local
+        # hopefully taking advantage of databrick's ability to copy from
+        # one bucket to another quickly
         start = time.time()
-        # Get modification time - assuming source_file_path is accessible locally
-        modification_time = os.path.getmtime(source_file_path)
-        source_modified_at = datetime.datetime.fromtimestamp(modification_time)
+        dbutils.fs.cp(source_file_path, active_file_path)
         ingested_at = datetime.datetime.now()
-        LOGGER.debug(f"File info obtained in {time.time() - start:.2f}s")
+        LOGGER.debug(f"File copied in {time.time() - start:.2f}s")
 
         # Create a new inventory row
         new_entry = Row(
@@ -121,8 +122,8 @@ def process_file(file_date, source_file_path, target_directory, existing_hashes,
             source_file_path=source_file_path,
             file_hash=file_hash,
             active_file_path=active_file_path,
-            source_modified_at=source_modified_at,
-            data_date=file_date,
+            source_modified_at=file_info["file_modification_time"],
+            data_date=file_info["file_date"],
         )
         return new_entry
     except Exception as e:
@@ -139,19 +140,11 @@ def main():
     LOGGER.debug(f"create a volume at {target_volume_fqdn_path}")
     spark.sql(f"CREATE VOLUME IF NOT EXISTS {target_volume_fqdn_path}")
 
-    target_volume_location = get_unity_volume_location(target_volume_fqdn_path)
-    target_bucket_id = urlparse(target_volume_location).netloc
-    target_file_prefix = urlparse(target_volume_location).path.lstrip('/')
-    LOGGER.debug(target_file_prefix)
-    
-    
     target_directory = os.path.join(
         "/Volumes", target_volume_fqdn_path.replace(".", "/")
     )
 
-    target_s3_bucket_path = get_unity_volume_location(target_volume_fqdn_path)
-
-    LOGGER.warning(f"volume created, target directory is: {target_directory}, bucket location is {target_s3_bucket_path}")
+    LOGGER.warning(f"volume created, target directory is: {target_directory}")
 
     table_definition = load_table_struct(
         ERA5_INVENTORY_TABLE_DEFINITION_PATH, ERA5_INVENTORY_TABLE_NAME
@@ -167,7 +160,8 @@ def main():
     latest_date_df = spark.sql(latest_date_query)
     latest_date = latest_date_df.collect()[0]["latest_date"]
     LOGGER.debug(
-        f"latest date seen in the query of {inventory_table_fqdn} is {latest_date}"
+        f"latest date seen in the query of "
+        f"{inventory_table_fqdn} is {latest_date}"
     )
     if latest_date is None:
         latest_date = ERA5_START_DATE
@@ -182,66 +176,51 @@ def main():
 
     # This is the hard-coded pattern for era5 daily
     pattern = re.compile(r"reanalysis-era5-sfc-daily-(\d{4}-\d{2}-\d{2})\.nc$")
-    # sorting here in case the job doesn't complete we will have been working from the 
-    # oldest date to the newest date, so querying the database won't kick us too far
-    # forward in time if we haven't finished the past.
-    # TODO: just have this do ALL the missing dates and also re-test 3 months prior
 
-    era5_source_s3_bucket_path = get_unity_volume_location(ERA5_SOURCE_VOLUME_FQDN)
-    aws_access_key = dbutils.secrets.get(scope=AWS_SECRET_SCOPE, key=AWS_ACCESS_KEY_ID)
-    aws_secret_key = dbutils.secrets.get(scope=AWS_SECRET_SCOPE, key=AWS_SECRET_KEY_ID)
-    s3 = boto3.client(
-        's3',
-        aws_access_key_id=aws_access_key,
-        aws_secret_access_key=aws_secret_key,
-    )
-
-    era5_bucket_id = urlparse(era5_source_s3_bucket_path).netloc
-    era5_file_prefix = urlparse(era5_source_s3_bucket_path).path.lstrip('/')
     LOGGER.debug(start_date)
     LOGGER.debug(end_date)
 
-    """
-    paginator = s3.get_paginator('list_objects_v2')
-    page_iterator = paginator.paginate(Bucket=bucket_id, Prefix=era5_file_prefix)
-
-    all_objects = []
-    for page in page_iterator:
-        if 'Contents' in page:
-            all_objects.extend(page['Contents'])
-
-    filtered_files = sorted([
-        (file_date, s3_object['Key']) for s3_object in all_objects
-        if s3_object['Key'].endswith(".nc")
-        and (match := pattern.search(os.path.basename(s3_object['Key'])))
-        and (file_date := datetime.datetime.strptime(match.group(1), "%Y-%m-%d").date())
-        and start_date <= file_date <= end_date
-    ])
-    """
-    filtered_files = sorted([
-        (file_date, file_path)
-        for file_path in glob.glob(os.path.join(source_directory, "*.nc"))
-        if (match := pattern.search(os.path.basename(file_path)))
-        and (
-            file_date := datetime.datetime.strptime(
-                match.group(1), "%Y-%m-%d"
-            ).date()
-        )
-        and start_date <= file_date <= end_date
-    ])
-    
-    #LOGGER.debug(filtered_files)
-    LOGGER.debug(
-        f"filtered {len(filtered_files)} in {time.time()-start_time:.2f}s"
+    # sorting here in case the job doesn't complete we will have been working
+    # from the oldest date to the newest date, so querying the database won't
+    # kick us too far forward in time if we haven't finished the past.
+    files_to_process = sorted(
+        [
+            {
+                "file_date": file_date,
+                "path": file_info.path,
+                # dbutils.fs does time in ms, so convert to seconds w/ / 1000
+                "file_modification_time": datetime.datetime.fromtimestamp(
+                    file_info.modificationTime / 1000
+                ),
+            }
+            for file_info in dbutils.fs.ls(source_directory)
+            if (match := pattern.search(os.path.basename(file_info.path)))
+            and (  # noqa: W503
+                file_date := datetime.datetime.strptime(
+                    match.group(1), "%Y-%m-%d"
+                ).date()
+            )
+            and start_date <= file_date <= end_date  # noqa: W503
+        ],
+        key=lambda x: x["file_date"],
     )
 
-    LOGGER.debug(f'about to pre-cache all the file hashes in {inventory_table_fqdn}')
+    LOGGER.debug(
+        f"filtered {len(files_to_process)} in {time.time()-start_time:.2f}s"
+    )
+
     start = time.time()
-    existing_hashes_df = spark.sql(f"SELECT file_hash FROM {inventory_table_fqdn}")
-    existing_hashes = {row.file_hash for row in existing_hashes_df.collect()}
-    LOGGER.debug(f'took {time.time()-start:.2f}s to create source to hash count')
+    existing_hashes_df = spark.sql(
+        f"SELECT file_hash FROM {inventory_table_fqdn}"
+    )
+
+    existing_hash_dict = {row.file_hash for row in existing_hashes_df.collect()}
+
+    LOGGER.debug(
+        f"took {time.time()-start:.2f}s to create source to hash count"
+    )
     start = time.time()
-    
+
     counts_df = spark.sql(
         f"""
         SELECT source_file_path, COUNT(*) as cnt 
@@ -250,17 +229,23 @@ def main():
         """
     )
     # it's faster to create a lookup in one shot rather than individual calls
-    counts_dict = collections.defaultdict(
-        int, {row["source_file_path"]: row["cnt"] for row in counts_df.collect()})
-    LOGGER.debug(f'took {time.time()-start:.2f}s to create database lookups')
+    ingested_file_count_dict = collections.defaultdict(
+        int,
+        {row["source_file_path"]: row["cnt"] for row in counts_df.collect()},
+    )
+    LOGGER.debug(f"took {time.time()-start:.2f}s to create database lookups")
 
     new_entries = []
-    for file_date, source_file_path in tqdm(
-        filtered_files, desc="Ingesting files"
-    ):
-        process_file(s3, era5_bucket_id, file_date, source_file_path, target_directory, existing_hashes, counts_dict, new_entries, era5_file_prefix, target_s3_bucket_path)
+    for file_info in tqdm(files_to_process, desc="Ingesting files"):
+        process_file(
+            file_info,
+            LOCAL_EPHEMERAL_PATH,
+            target_directory,
+            existing_hash_dict,
+            ingested_file_count_dict,
+        )
         break
-    
+
     # last pass through, just dump the rest not entered
     LOGGER.debug(f"new entries: {new_entries}")
     if new_entries:
