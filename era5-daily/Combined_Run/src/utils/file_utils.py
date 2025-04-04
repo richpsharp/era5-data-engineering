@@ -3,29 +3,27 @@
 import hashlib
 import logging
 
-import xarray as xr
+import netCDF4
 
 LOGGER = logging.getLogger(__name__)
 
 
 def is_netcdf_file_valid(source_file_path):
-    """Check if a NetCDF binary file can be opened with xarray.
+    """Check if a NetCDF file is valid by opening its header with netCDF4.
 
     Args:
-        source_file_path (str): Keep this for logging.
+        source_file_path (str): The path to the NetCDF file.
 
     Returns:
-        bool: True if the file is valid, False if corrupt.
+        bool: True if the file is valid, False if there's any failure.
     """
     try:
-        with xr.open_dataset(source_file_path, engine="netcdf4") as ds:
-            # this will raise an exception if it can't open it as a netcdf4
-            ds.load()
+        # Open the file in read-only mode; this only reads the header.
+        ds = netCDF4.Dataset(source_file_path, mode="r")
+        ds.close()
         return True
     except Exception:
-        LOGGER.exception(
-            f"something bad happend on when trying to read {source_file_path}"
-        )
+        LOGGER.exception(f"Error reading NetCDF header from {source_file_path}")
         return False
 
 
