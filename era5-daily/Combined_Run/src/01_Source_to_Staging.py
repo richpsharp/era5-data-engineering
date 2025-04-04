@@ -213,50 +213,27 @@ def main():
     pattern = re.compile(r"reanalysis-era5-sfc-daily-(\d{4}-\d{2}-\d{2})\.nc$")
 
     LOGGER.debug(f"search for files between {start_date} and {end_date} v3")
-
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        futures = [
-            executor.submit(
-                build_file_info, file_info, pattern, start_date, end_date
-            )
-            for file_info in dbutils.fs.ls(source_directory)
-        ]
-    # results = []
-    # for future in as_completed(futures):
-    #     res = future.result()
-    #     if res is not None:
-    #         results.append(res)
-    # files_to_process = sorted(results, key=lambda x: x["file_date"])
     files_to_process = sorted(
-        (future.result() for future in futures if future.result() is not None),
+        [
+            {
+                "file_date": file_date,
+                "path": file_info.path,
+                # dbutils.fs does time in ms, so convert to seconds w/ / 1000
+                "file_modification_time": datetime.datetime.fromtimestamp(
+                    file_info.modificationTime / 1000
+                ),
+            }
+            for file_info in dbutils.fs.ls(source_directory)
+            if (match := pattern.search(os.path.basename(file_info.path)))
+            and (  # noqa: W503
+                file_date := datetime.datetime.strptime(
+                    match.group(1), "%Y-%m-%d"
+                ).date()
+            )
+            and start_date <= file_date <= end_date  # noqa: W503
+        ],
         key=lambda x: x["file_date"],
     )
-    # sorting here in case the job doesn't complete we will have been working
-    # from the oldest date to the newest date, so querying the database won't
-    # kick us too far forward in time if we haven't finished the past.
-
-    # files_to_process = sorted(
-    #     [
-    #         {
-    #             "file_date": file_date,
-    #             "path": file_info.path,
-    #             # dbutils.fs does time in ms, so convert to seconds w/ / 1000
-    #             "file_modification_time": datetime.datetime.fromtimestamp(
-    #                 file_info.modificationTime / 1000
-    #             ),
-    #         }
-    #         for file_info in dbutils.fs.ls(source_directory)
-    #         if (match := pattern.search(os.path.basename(file_info.path)))
-    #         and (  # noqa: W503
-    #             file_date := datetime.datetime.strptime(
-    #                 match.group(1), "%Y-%m-%d"
-    #             ).date()
-    #         )
-    #         and start_date <= file_date <= end_date  # noqa: W503
-    #     ],
-    #     key=lambda x: x["file_date"],
-    # )
-
     LOGGER.debug(
         f"filtered {len(files_to_process)} in {time.time()-start_time:.2f}s"
     )
@@ -265,14 +242,7 @@ def main():
     existing_hashes_df = spark.sql(
         f"SELECT file_hash FROM {inventory_table_fqdn}"
     )
-
     existing_hash_dict = {row.file_hash for row in existing_hashes_df.collect()}
-
-    LOGGER.debug(
-        f"took {time.time()-start:.2f}s to create source to hash count"
-    )
-    start = time.time()
-
     counts_df = spark.sql(
         f"""
         SELECT source_file_path, COUNT(*) as cnt 
@@ -288,15 +258,24 @@ def main():
     LOGGER.debug(f"took {time.time()-start:.2f}s to create database lookups")
 
     new_entries = []
-    for file_info in tqdm(files_to_process, desc="Ingesting files"):
-        process_file(
-            file_info,
-            LOCAL_EPHEMERAL_PATH,
-            target_directory,
-            existing_hash_dict,
-            ingested_file_count_dict,
-        )
-        break
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = [
+            executor.submit(
+                process_file,
+                file_info,
+                LOCAL_EPHEMERAL_PATH,
+                target_directory,
+                existing_hash_dict,
+                ingested_file_count_dict,
+            )
+            for file_info in files_to_process[0:10]
+        ]
+
+    new_entries = [
+        future.result()
+        for future in tqdm(futures, desc="Ingesting files")
+        if future.result() is not None
+    ]
 
     # last pass through, just dump the rest not entered
     LOGGER.debug(f"new entries: {new_entries}")
@@ -305,7 +284,6 @@ def main():
         new_df.write.format("delta").mode("append").saveAsTable(
             inventory_table_fqdn
         )
-        new_entries = []
     LOGGER.info(f"ALL DONE! took {time.time()-global_start_time:.2f}s")
 
 
