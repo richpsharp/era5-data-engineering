@@ -209,7 +209,7 @@ def main():
     # This is the hard-coded pattern for era5 daily
     pattern = re.compile(r"reanalysis-era5-sfc-daily-(\d{4}-\d{2}-\d{2})\.nc$")
 
-    LOGGER.debug(f"search for files between {start_date} and {end_date} v2")
+    LOGGER.debug(f"search for files between {start_date} and {end_date} v3")
 
     with ThreadPoolExecutor(max_workers=8) as executor:
         futures = [
@@ -225,7 +225,7 @@ def main():
     #         results.append(res)
     # files_to_process = sorted(results, key=lambda x: x["file_date"])
     files_to_process = sorted(
-        (future.result() for future in futures if future is not None),
+        (future.result() for future in futures if future.result() is not None),
         key=lambda x: x["file_date"],
     )
     # sorting here in case the job doesn't complete we will have been working
