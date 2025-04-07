@@ -305,9 +305,8 @@ def main():
         f"sending to parallelize {len(files_to_process)} among "
         f"{num_slices} slices"
     )
-    files_rdd = sc.parallelize(files_to_process, numSlices=num_slices)
 
-    _ = files_rdd.map(
+    for file_info in files_to_process:
         lambda file_info: process_file_node_batch(
             file_info,
             # pass the fixed args to process file as a dict so we don't tramp
@@ -320,7 +319,22 @@ def main():
             },
             inventory_table_fqdn,
         )
-    ).collect()
+
+    # files_rdd = sc.parallelize(files_to_process, numSlices=num_slices)
+    # _ = files_rdd.map(
+    #     lambda file_info: process_file_node_batch(
+    #         file_info,
+    #         # pass the fixed args to process file as a dict so we don't tramp
+    #         # the arguments from manager to worker
+    #         {
+    #             "local_directory": LOCAL_EPHEMERAL_PATH,
+    #             "target_directory": target_directory,
+    #             "existing_hash_dict": existing_hash_dict,
+    #             "ingested_file_count_dict": ingested_file_count_dict,
+    #         },
+    #         inventory_table_fqdn,
+    #     )
+    # ).collect()
 
     LOGGER.info(f"ALL DONE! took {time.time()-global_start_time:.2f}s")
 
