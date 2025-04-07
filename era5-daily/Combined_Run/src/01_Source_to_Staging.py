@@ -204,46 +204,46 @@ def main():
     """Entrypoint."""
     global_start_time = time.time()
     schema_fqdn_path = get_catalog_schema_fqdn()
-    LOGGER.debug(f"Create a schema at {schema_fqdn_path} if not exists")
+    LOGGER.info(f"Create a schema at {schema_fqdn_path} if not exists")
     create_schema_if_not_exists(schema_fqdn_path)
     target_volume_fqdn_path = f"{schema_fqdn_path}.{ERA5_STAGING_VOLUME_ID}"
-    LOGGER.debug(f"Create a volume at {target_volume_fqdn_path} if not exists")
+    LOGGER.info(f"Create a volume at {target_volume_fqdn_path} if not exists")
     spark.sql(f"CREATE VOLUME IF NOT EXISTS {target_volume_fqdn_path}")
 
     target_directory = os.path.join(
         "/Volumes", target_volume_fqdn_path.replace(".", "/")
     )
 
-    LOGGER.debug(f"Target directory is: {target_directory}")
+    LOGGER.info(f"Target directory is: {target_directory}")
 
     table_definition = load_table_struct(
         ERA5_INVENTORY_TABLE_DEFINITION_PATH, ERA5_INVENTORY_TABLE_NAME
     )
     inventory_table_fqdn = f"{schema_fqdn_path}.{ERA5_INVENTORY_TABLE_NAME}"
-    LOGGER.debug(f"Creating inventory table at {inventory_table_fqdn}")
+    LOGGER.info(f"Creating inventory table at {inventory_table_fqdn}")
     create_table(inventory_table_fqdn, table_definition)
 
-    LOGGER.debug(f"Query most recent date from {inventory_table_fqdn}")
+    LOGGER.info(f"Query most recent date from {inventory_table_fqdn}")
     latest_date_query = f"""
         SELECT MAX(data_date) AS latest_date
         FROM {inventory_table_fqdn}
     """
     latest_date_df = spark.sql(latest_date_query)
     latest_date = latest_date_df.collect()[0]["latest_date"]
-    LOGGER.debug(
+    LOGGER.info(
         f"latest date seen in the query of "
         f"{inventory_table_fqdn} is {latest_date}"
     )
     if latest_date is None:
         latest_date = ERA5_START_DATE
-    LOGGER.debug(f"working date is {latest_date}")
+    LOGGER.info(f"working date is {latest_date}")
 
     start_date = latest_date - relativedelta(months=DELTA_MONTHS)
     end_date = datetime.date.today()
 
     start_time = time.time()
     source_directory = os.path.join(ERA5_SOURCE_VOLUME_PATH, "daily_summary")
-    LOGGER.debug(f"about to search {source_directory}")
+    LOGGER.info(f"about to search {source_directory}")
 
     # This is the hard-coded pattern for era5 daily netcdf files
     pattern = re.compile(r"reanalysis-era5-sfc-daily-(\d{4}-\d{2}-\d{2})\.nc$")
