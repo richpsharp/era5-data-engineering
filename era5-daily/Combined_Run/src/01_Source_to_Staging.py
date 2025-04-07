@@ -76,9 +76,15 @@ def process_file_node_batch(
             for file_info in files_to_process
         ]
 
-    results = [future.result() for future in process_file_futures]
-    if results:
-        new_df = spark.createDataFrame(results)
+    new_inventory_entries = [
+        future.result()
+        for future in process_file_futures
+        # will be None if the file already exists in the inventory
+        if future.result() is not None
+    ]
+
+    if new_inventory_entries:
+        new_df = spark.createDataFrame(new_inventory_entries)
         new_df.write.format("delta").mode("append").saveAsTable(
             inventory_table_fqdn
         )
