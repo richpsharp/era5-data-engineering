@@ -1,3 +1,4 @@
+%python
 """ERA5 source to staging pipeline."""
 
 import shutil
@@ -41,7 +42,7 @@ LOGGER.setLevel(logging.DEBUG)
 # data starts here and we'll use it to set a threshold for when the data should
 # be pulled
 ERA5_START_DATE = datetime.datetime(1950, 1, 1).date()
-DELTA_MONTHS = 0  # always search at least 3 months prior
+DELTA_MONTHS = 3  # always search at least 3 months prior
 
 
 def process_file_node_batch(
@@ -68,7 +69,7 @@ def process_file_node_batch(
         None
     """
     start = time.time()
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    with ThreadPoolExecutor(max_workers=min(len(files_to_process), 4)) as executor:
         process_file_futures = [
             executor.submit(
                 process_file, **dict(process_file_args, file_info=file_info)
@@ -295,23 +296,23 @@ def main():
     # get the number of cpus that Spark will use to parallelize for splitting
     sc = SparkContext.getOrCreate()
     num_cpus = sc.defaultParallelism
-    num_partitions = num_cpus * 4  # 4 slices per CPU works well from testing
-    # a batch size of 4 on a single CPU works well from testing
-    batch_size = 2
-
+    # 4 jobs per cpu is good for the goofys file deamon throughput
+    jobs_per_cpu = 4
     batches_to_process = [
-        files_to_process[i : i + batch_size]  # noqa: E203
-        for i in range(0, len(files_to_process), batch_size)
+        files_to_process[i : i + jobs_per_cpu]  # noqa: E203
+        for i in range(0, len(files_to_process), jobs_per_cpu)
     ]
+    # 4 slices per CPU works well from testing
+    num_partitions = num_cpus * 4
     LOGGER.info(
         f"sending to parallelize {len(batches_to_process)} batches among "
         f"{num_partitions} slices"
     )
 
     files_rdd = sc.parallelize(batches_to_process, numSlices=num_partitions)
-
     # Process each batch partition as soon as it's ready
-    mapped_rdd = files_rdd.map(
+    start = time.time()
+    nested_new_inventory_entries = files_rdd.map(
         lambda file_infos_to_process: process_file_node_batch(
             file_infos_to_process,
             {
@@ -322,18 +323,17 @@ def main():
             },
             inventory_table_fqdn,
         )
-    )
+    ).collect()
+    
+    new_inventory_entries = [
+        x for local_inventory_entries in nested_new_inventory_entries 
+        for x in local_inventory_entries]
 
-    for new_inventory_entries in tqdm(
-        mapped_rdd.toLocalIterator(), total=num_partitions
-    ):
-        if new_inventory_entries:
-            LOGGER.debug(f'RESULT: {new_inventory_entries}')
-            new_df = spark.createDataFrame(new_inventory_entries)
-            new_df.write.format("delta").mode("append").saveAsTable(inventory_table_fqdn)
-
-    LOGGER.info(f"ALL DONE! took {time.time()-global_start_time:.2f}s")
-
-
+    LOGGER.info(f"ALL DONE! took {time.time()-global_start_time:.4f}s {(time.time()-start)/len(files_to_process):.2f}s for {len(new_inventory_entries)}")
+    if new_inventory_entries:
+        new_df = spark.createDataFrame(new_inventory_entries)
+        new_df.write.format("delta").mode("append").saveAsTable(inventory_table_fqdn)
+    
+    
 if __name__ == "__main__":
     main()
