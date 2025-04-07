@@ -1,5 +1,6 @@
 """ERA5 source to staging pipeline."""
 
+import shutil
 import datetime
 from dateutil.relativedelta import relativedelta
 import logging
@@ -16,13 +17,14 @@ from config import ERA5_SOURCE_VOLUME_PATH
 from config import ERA5_STAGING_VOLUME_ID
 from databricks.sdk.runtime import spark
 from pyspark.sql import Row
-from tqdm import tqdm
+#from tqdm import tqdm
 from utils.catalog_support import get_catalog_schema_fqdn
 from utils.catalog_support import create_schema_if_not_exists
 from utils.file_utils import hash_file
 from utils.file_utils import is_netcdf_file_valid
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
+from pyspark import SparkContext
 
 try:
     dbutils  # Check if dbutils is defined
@@ -38,8 +40,73 @@ LOGGER.setLevel(logging.INFO)
 # data starts here and we'll use it to set a threshold for when the data should
 # be pulled
 ERA5_START_DATE = datetime.datetime(1950, 1, 1).date()
-DELTA_MONTHS = 3  # always search at least 3 months prior
+DELTA_MONTHS = 0  # always search at least 3 months prior
 
+
+def process_file_wrapper(file_info,
+                         local_directory,
+    target_directory,
+    existing_hash_dict,
+    ingested_file_count_dict,):
+    try:
+        return process_file(
+            file_info,
+            LOCAL_EPHEMERAL_PATH,
+            target_directory,
+            existing_hash_dict,
+            ingested_file_count_dict
+        )
+    except Exception as e:
+        # Make sure you clearly log or return exceptions
+        return {"file_info": file_info, "error": str(e)}
+
+
+def process_file_node_batch(
+    files_to_process,
+    local_directory,
+    target_directory,
+    existing_hash_dict,
+    ingested_file_count_dict,
+    inventory_table_fqdn):
+    with ThreadPoolExecutor(max_workers=4) as executor:
+            process_file_futures = [
+                executor.submit(
+                    process_file,
+                    file_info,
+                    LOCAL_EPHEMERAL_PATH,
+                    target_directory,
+                    existing_hash_dict,
+                    ingested_file_count_dict,
+                )
+                for file_info in files_to_process
+            ]
+
+            new_entries = []
+            for future in tqdm(
+                as_completed(process_file_futures),
+                total=len(process_file_futures),
+                desc="Ingesting files",
+            ):
+                result = future.result()
+                if result is not None:
+                    new_entries.append(result)
+    
+    LOGGER.info(f"processed files in {time.time()-start:.2f}s")
+    # last pass through, just dump the rest not entered
+    errors = False
+    for entry in new_entries:
+        if 'error' in entry:
+            LOGGER.error(entry['error'])
+            errors = True
+    if errors:
+        raise RuntimeError('errors on workers')
+
+    LOGGER.debug(f"new entries: {new_entries}")
+    if new_entries:
+        new_df = spark.createDataFrame(new_entries)
+        new_df.write.format("delta").mode("append").saveAsTable(
+            inventory_table_fqdn
+        )
 
 def process_file(
     file_info,
@@ -74,21 +141,31 @@ def process_file(
             local_directory, os.path.basename(source_file_path)
         )
         LOGGER.debug(f"copying from {source_file_path} to {local_file_path}")
+
         # dbutils needs to know this is a local file
         if os.path.exists(local_file_path):
             os.remove(local_file_path)
-        dbutils.fs.cp(source_file_path, f"file://{local_file_path}")
+        #dbutils.fs.cp(source_file_path, f"file://{local_file_path}")
+        shutil.copyfile(source_file_path, local_file_path)
         LOGGER.debug(f"Downloaded in {time.time() - start:.2f}s")
 
         start = time.time()
+        # Determine the file version defined as the count of previous copies+1
+        version = ingested_file_count_dict[source_file_path] + 1
+        name, ext = os.path.splitext(os.path.basename(source_file_path))
+        file_hash = hash_file(local_file_path)
+        active_file_path = os.path.join(
+            target_directory, f"{name}_v{version}_{file_hash}{ext}"
+        )
+
         if not is_netcdf_file_valid(local_file_path):
             LOGGER.error(f"File {source_file_path} appears corrupt; skipping")
+            return {'error': f"File {source_file_path} to {local_file_path} appears corrupt; skipping"}
             return None
         LOGGER.debug(f"Validation took {time.time() - start:.2f}s")
 
+
         start = time.time()
-        # Compute file hash
-        file_hash = hash_file(local_file_path)
         try:
             os.remove(local_file_path)
         except Exception:
@@ -102,22 +179,17 @@ def process_file(
                 f"File with hash {file_hash} already ingested; skipping "
                 f"{source_file_path}"
             )
+            return {'error': f"File with hash {file_hash} already ingested; skipping "}
             return None
 
         start = time.time()
-        # Determine the file version defined as the count of previous copies+1
-        version = ingested_file_count_dict[source_file_path] + 1
-        name, ext = os.path.splitext(os.path.basename(source_file_path))
-        active_file_path = os.path.join(
-            target_directory, f"{name}_v{version}_{file_hash}{ext}"
-        )
-
         # note this is copying the *source* to the active, not the local
         # hopefully taking advantage of databrick's ability to copy from
         # one bucket to another quickly
         start = time.time()
         # now were copying AWAY from the local file system
-        dbutils.fs.cp(source_file_path, f"dbfs://{active_file_path}")
+        #dbutils.fs.cp(source_file_path, f"dbfs://{active_file_path}")
+        shutil.copyfile(source_file_path, active_file_path)
         ingested_at = datetime.datetime.now()
         LOGGER.debug(f"File copied in {time.time() - start:.2f}s")
 
@@ -132,8 +204,8 @@ def process_file(
         )
         return new_entry
     except Exception as e:
-        LOGGER.error(f"Error processing {source_file_path}: {e}")
-        return None
+        LOGGER.exception(f"Error processing {source_file_path}: {e}")
+        raise
 
 
 def build_file_info(file_info, pattern, start_date, end_date):
@@ -204,8 +276,7 @@ def main():
         latest_date = ERA5_START_DATE
     LOGGER.debug(f"working date is {latest_date}")
 
-    #start_date = latest_date - relativedelta(months=DELTA_MONTHS)
-    start_date = ERA5_START_DATE - relativedelta(months=DELTA_MONTHS)
+    start_date = latest_date - relativedelta(months=DELTA_MONTHS)
     end_date = datetime.date.today()
 
     start_time = time.time()
@@ -215,18 +286,19 @@ def main():
     # This is the hard-coded pattern for era5 daily
     pattern = re.compile(r"reanalysis-era5-sfc-daily-(\d{4}-\d{2}-\d{2})\.nc$")
 
-    LOGGER.debug(f"search for files between {start_date} and {end_date} v3")
+    LOGGER.info(f"search for files between {start_date} and {end_date} v3")
     files_to_process = sorted(
         [
             {
                 "file_date": file_date,
-                "path": file_info.path,
+                # dbfs ls gives us prefixed with dbfs// so we strip it here
+                "path": file_info.path.strip('dbfs:'),
                 # dbutils.fs does time in ms, so convert to seconds w/ / 1000
                 "file_modification_time": datetime.datetime.fromtimestamp(
                     file_info.modificationTime / 1000
                 ),
             }
-            for file_info in dbutils.fs.ls(source_directory)
+            for file_info in dbutils.fs.ls(f"dbfs://{source_directory}")
             if (match := pattern.search(os.path.basename(file_info.path)))
             and (  # noqa: W503
                 file_date := datetime.datetime.strptime(
@@ -237,7 +309,8 @@ def main():
         ],
         key=lambda x: x["file_date"],
     )
-    LOGGER.debug(
+    #files_to_process = files_to_process[:176]  # this was for debugging a fast set
+    LOGGER.info(
         f"filtered {len(files_to_process)} in {time.time()-start_time:.2f}s"
     )
 
@@ -260,37 +333,24 @@ def main():
     )
     LOGGER.debug(f"took {time.time()-start:.2f}s to create database lookups")
 
-    new_entries = []
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        process_file_futures = [
-            executor.submit(
-                process_file,
-                file_info,
-                LOCAL_EPHEMERAL_PATH,
-                target_directory,
-                existing_hash_dict,
-                ingested_file_count_dict,
-            )
-            for file_info in files_to_process[0:10]
-        ]
+    #new_entries = []
+    start = time.time()
 
-    new_entries = []
-    for future in tqdm(
-        process_file_futures,
-        total=len(process_file_futures),
-        desc="Ingesting files",
-    ):
-        result = future.result()
-        if result is not None:
-            new_entries.append(result)
+    num_slices = 16*4*4
+    sc = SparkContext.getOrCreate()
+    LOGGER.info(f'sending to parallelize {len(files_to_process)} among {num_slices} slices')
+    files_rdd = sc.parallelize(files_to_process, numSlices=num_slices)  # 4 per core
 
-    # last pass through, just dump the rest not entered
-    LOGGER.debug(f"new entries: {new_entries}")
-    if new_entries:
-        new_df = spark.createDataFrame(new_entries)
-        new_df.write.format("delta").mode("append").saveAsTable(
-            inventory_table_fqdn
-        )
+    results = files_rdd.map(
+        lambda file_info: process_file_node_batch(
+            file_info,
+            LOCAL_EPHEMERAL_PATH,
+            target_directory,
+            existing_hash_dict,
+            ingested_file_count_dict,
+            inventory_table_fqdn,
+        )).collect()
+
     LOGGER.info(f"ALL DONE! took {time.time()-global_start_time:.2f}s")
 
 
