@@ -35,7 +35,7 @@ except NameError:
     dbutils = DBUtils(spark)
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.INFO)
+LOGGER.setLevel(logging.DEBUG)
 
 
 # data starts here and we'll use it to set a threshold for when the data should
@@ -83,11 +83,7 @@ def process_file_node_batch(
         if future.result() is not None
     ]
 
-    if new_inventory_entries:
-        new_df = spark.createDataFrame(new_inventory_entries)
-        new_df.write.format("delta").mode("append").saveAsTable(
-            inventory_table_fqdn
-        )
+    return new_inventory_entries
     LOGGER.debug(f"all done batch in {time.time()-start:.2f}s")
 
 
@@ -128,6 +124,7 @@ def process_file(
             dictionary with an "error" key describing the issue encountered.
     """
     try:
+        LOGGER.debug(f"current file info: {file_info}")
         source_file_path = file_info["path"]
         LOGGER.debug(f"Processing {source_file_path}")
         local_file_path = os.path.join(
@@ -154,13 +151,6 @@ def process_file(
                 )
             }
         LOGGER.debug(f"Validation complete for {local_file_path}")
-
-        try:
-            os.remove(local_file_path)
-        except Exception:
-            # This shouldn't happen but it's okay if it does since local
-            # storage is ephemeral
-            LOGGER.exception(f"could not remove {local_file_path}, skipping")
 
         # Skip if file already ingested
         if file_hash in existing_hash_dict:
@@ -194,10 +184,19 @@ def process_file(
             source_modified_at=file_info["file_modification_time"],
             data_date=file_info["file_date"],
         )
+
         return new_entry
     except Exception as e:
         LOGGER.exception(f"Error processing {source_file_path}: {e}")
         raise
+    finally:
+        try:
+            os.remove(local_file_path)
+        except Exception:
+            # This shouldn't happen but it's okay if it does since local
+            # storage is ephemeral
+            LOGGER.exception(f"could not remove {local_file_path}, skipping")
+
 
 
 def main():
@@ -301,14 +300,19 @@ def main():
     sc = SparkContext.getOrCreate()
     num_cpus = sc.defaultParallelism
     num_slices = num_cpus * 4  # 4 slices per CPU works well from testing
+    
+
+    batch_size = 4
+    batches_to_process = [files_to_process[i:i+batch_size] for i in range(0, len(files_to_process), batch_size)]
     LOGGER.info(
-        f"sending to parallelize {len(files_to_process)} among "
+        f"sending to parallelize {len(batches_to_process)} batches among "
         f"{num_slices} slices"
     )
 
-    for file_info in files_to_process:
-        lambda file_info: process_file_node_batch(
-            file_info,
+    """
+    for file_infos_to_process in batches_to_process:
+        f = lambda file_infos_to_process: process_file_node_batch(
+            file_infos_to_process,
             # pass the fixed args to process file as a dict so we don't tramp
             # the arguments from manager to worker
             {
@@ -319,22 +323,35 @@ def main():
             },
             inventory_table_fqdn,
         )
+        LOGGER.info(file_infos_to_process)
+        new_inventory_entries = f(file_infos_to_process)
+        if new_inventory_entries:
+            new_df = spark.createDataFrame(new_inventory_entries)
+            new_df.write.format("delta").mode("append").saveAsTable(
+                inventory_table_fqdn
+            )
+    """
 
-    # files_rdd = sc.parallelize(files_to_process, numSlices=num_slices)
-    # _ = files_rdd.map(
-    #     lambda file_info: process_file_node_batch(
-    #         file_info,
-    #         # pass the fixed args to process file as a dict so we don't tramp
-    #         # the arguments from manager to worker
-    #         {
-    #             "local_directory": LOCAL_EPHEMERAL_PATH,
-    #             "target_directory": target_directory,
-    #             "existing_hash_dict": existing_hash_dict,
-    #             "ingested_file_count_dict": ingested_file_count_dict,
-    #         },
-    #         inventory_table_fqdn,
-    #     )
-    # ).collect()
+    files_rdd = sc.parallelize(batches_to_process, numSlices=num_slices)
+
+    # Process each batch partition as soon as it's ready
+    for new_inventory_entries in files_rdd.map(
+        lambda file_infos_to_process: process_file_node_batch(
+            file_infos_to_process,
+            {
+                'local_directory': LOCAL_EPHEMERAL_PATH,
+                'target_directory': target_directory,
+                'existing_hash_dict': existing_hash_dict,
+                'ingested_file_count_dict': ingested_file_count_dict,
+            },
+            inventory_table_fqdn,
+        )
+    ).toLocalIterator():
+        if new_inventory_entries:
+            new_df = spark.createDataFrame(new_inventory_entries)
+            new_df.write.format('delta').mode('append').saveAsTable(inventory_table_fqdn)
+
+
 
     LOGGER.info(f"ALL DONE! took {time.time()-global_start_time:.2f}s")
 
