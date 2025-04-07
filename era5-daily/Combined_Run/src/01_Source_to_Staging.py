@@ -8,7 +8,7 @@ import os
 import re
 import time
 import collections
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 
 from config import LOCAL_EPHEMERAL_PATH
 from config import ERA5_INVENTORY_TABLE_DEFINITION_PATH
@@ -17,7 +17,8 @@ from config import ERA5_SOURCE_VOLUME_PATH
 from config import ERA5_STAGING_VOLUME_ID
 from databricks.sdk.runtime import spark
 from pyspark.sql import Row
-#from tqdm import tqdm
+
+# from tqdm import tqdm
 from utils.catalog_support import get_catalog_schema_fqdn
 from utils.catalog_support import create_schema_if_not_exists
 from utils.file_utils import hash_file
@@ -43,70 +44,46 @@ ERA5_START_DATE = datetime.datetime(1950, 1, 1).date()
 DELTA_MONTHS = 0  # always search at least 3 months prior
 
 
-def process_file_wrapper(file_info,
-                         local_directory,
-    target_directory,
-    existing_hash_dict,
-    ingested_file_count_dict,):
-    try:
-        return process_file(
-            file_info,
-            LOCAL_EPHEMERAL_PATH,
-            target_directory,
-            existing_hash_dict,
-            ingested_file_count_dict
-        )
-    except Exception as e:
-        # Make sure you clearly log or return exceptions
-        return {"file_info": file_info, "error": str(e)}
-
-
 def process_file_node_batch(
     files_to_process,
-    local_directory,
-    target_directory,
-    existing_hash_dict,
-    ingested_file_count_dict,
-    inventory_table_fqdn):
+    process_file_args,
+    inventory_table_fqdn,
+):
+    """Processes a batch of files concurrently on a single node.
+
+    Used to distribute file processing on a single node to maximize IO
+    throughput since Spark can at most launch one job per one CPU instance.
+    Processes files through `process_file` function, then results are
+    sent to the `inventory_table_fqdn` table.
+
+    Args:
+        files_to_process (list): A list containing file metadata or paths to be
+            processed.
+        process_file_args (dict): Dictionary of arguments to pass to
+            `process_file`.
+        inventory_table_fqdn (str): Fully-qualified Delta table name
+            (database.table) for recording processed file metadata.
+
+    Returns:
+        None
+    """
+    start = time.time()
     with ThreadPoolExecutor(max_workers=4) as executor:
-            process_file_futures = [
-                executor.submit(
-                    process_file,
-                    file_info,
-                    LOCAL_EPHEMERAL_PATH,
-                    target_directory,
-                    existing_hash_dict,
-                    ingested_file_count_dict,
-                )
-                for file_info in files_to_process
-            ]
+        process_file_futures = [
+            executor.submit(
+                process_file, **dict(process_file_args, file_info=file_info)
+            )
+            for file_info in files_to_process
+        ]
 
-            new_entries = []
-            for future in tqdm(
-                as_completed(process_file_futures),
-                total=len(process_file_futures),
-                desc="Ingesting files",
-            ):
-                result = future.result()
-                if result is not None:
-                    new_entries.append(result)
-    
-    LOGGER.info(f"processed files in {time.time()-start:.2f}s")
-    # last pass through, just dump the rest not entered
-    errors = False
-    for entry in new_entries:
-        if 'error' in entry:
-            LOGGER.error(entry['error'])
-            errors = True
-    if errors:
-        raise RuntimeError('errors on workers')
-
-    LOGGER.debug(f"new entries: {new_entries}")
-    if new_entries:
-        new_df = spark.createDataFrame(new_entries)
+    results = [future.result() for future in process_file_futures]
+    if results:
+        new_df = spark.createDataFrame(results)
         new_df.write.format("delta").mode("append").saveAsTable(
             inventory_table_fqdn
         )
+    LOGGER.debug(f"all done batch in {time.time()-start:.2f}s")
+
 
 def process_file(
     file_info,
@@ -115,63 +92,69 @@ def process_file(
     existing_hash_dict,
     ingested_file_count_dict,
 ):
-    """Process a single file: download from S3, validate, hash, and re-upload.
+    """Process file: copy locally, validate, hash, and copy to target.
 
-    This function performs the following steps:
-      1. Downloads the file from S3.
-      2. Validates the NetCDF file using xarray.
-      3. Computes its SHA-256 hash.
-      4. Skips processing if the hash already exists.
-      5. Determines the version based on ingested_file_count_dict.
-      6. Uploads the file to the target S3 location with the hash and version in the filename.
-      7. Gathers file metadata to construct a new inventory row.
+    This function copies a file from its source location to a local directory,
+    validates that it is a valid NetCDF file, computes its SHA-256 hash, and
+    constructs a new filename incorporating a version number (determined by
+    the count of previous ingestions) and the computed hash. If the file is
+    invalid or has already been ingested (as determined by existing_hash_dict),
+    an error dictionary is returned. Otherwise, the file is copied to the
+    target directory and a pyspark.sql.Row containing the file's metadata is
+    returned.
 
     Args:
-        file_tuple (tuple): A tuple of (file_date, source_file_path).
+        file_info (dict): Dictionary with file metadata. Must contain at least:
+            - "path": Source file path.
+            - "file_modification_time": The last modification time of the file.
+            - "file_date": The date associated with the file.
+        local_directory (str): Directory path for temporary local storage.
+        target_directory (str): Destination directory where the processed
+            file is archived.
+        existing_hash_dict (dict): Mapping of file hashes to indicate files
+            that have already been ingested.
+        ingested_file_count_dict (dict): Mapping from source file paths to
+            their ingestion counts, used to determine file version.
 
     Returns:
-        Row or None: A pyspark.sql.Row containing the new inventory entry if successful,
-        or None if the file was skipped or an error occurred.
+        pyspark.sql.Row or dict: Returns a pyspark.sql.Row containing file
+            metadata if processing is successful; otherwise, returns a
+            dictionary with an "error" key describing the issue encountered.
     """
     try:
-        start = time.time()
         source_file_path = file_info["path"]
         LOGGER.debug(f"Processing {source_file_path}")
         local_file_path = os.path.join(
             local_directory, os.path.basename(source_file_path)
         )
-        LOGGER.debug(f"copying from {source_file_path} to {local_file_path}")
-
-        # dbutils needs to know this is a local file
         if os.path.exists(local_file_path):
+            # This could happen during sandboxing with a leftover file
             os.remove(local_file_path)
-        #dbutils.fs.cp(source_file_path, f"file://{local_file_path}")
         shutil.copyfile(source_file_path, local_file_path)
-        LOGGER.debug(f"Downloaded in {time.time() - start:.2f}s")
+        LOGGER.debug(f"Copied {local_file_path}")
 
-        start = time.time()
         # Determine the file version defined as the count of previous copies+1
         version = ingested_file_count_dict[source_file_path] + 1
         name, ext = os.path.splitext(os.path.basename(source_file_path))
         file_hash = hash_file(local_file_path)
-        active_file_path = os.path.join(
-            target_directory, f"{name}_v{version}_{file_hash}{ext}"
-        )
+        LOGGER.debug(f"Hash computed on {local_file_path}")
 
         if not is_netcdf_file_valid(local_file_path):
             LOGGER.error(f"File {source_file_path} appears corrupt; skipping")
-            return {'error': f"File {source_file_path} to {local_file_path} appears corrupt; skipping"}
-            return None
-        LOGGER.debug(f"Validation took {time.time() - start:.2f}s")
+            return {
+                "error": (
+                    f"File {source_file_path} to {local_file_path} appears "
+                    f"corrupt; skipping"
+                )
+            }
+        LOGGER.debug(f"Validation complete for {local_file_path}")
 
-
-        start = time.time()
         try:
             os.remove(local_file_path)
         except Exception:
+            # This shouldn't happen but it's okay if it does since local
+            # storage is ephemeral
             LOGGER.exception(f"could not remove {local_file_path}, skipping")
-            pass
-        LOGGER.debug(f"Hash computed in {time.time() - start:.2f}s")
 
         # Skip if file already ingested
         if file_hash in existing_hash_dict:
@@ -179,21 +162,24 @@ def process_file(
                 f"File with hash {file_hash} already ingested; skipping "
                 f"{source_file_path}"
             )
-            return {'error': f"File with hash {file_hash} already ingested; skipping "}
+            return {
+                "error": f"File with hash {file_hash} already ingested; skip"
+            }
             return None
 
-        start = time.time()
-        # note this is copying the *source* to the active, not the local
-        # hopefully taking advantage of databrick's ability to copy from
-        # one bucket to another quickly
-        start = time.time()
-        # now were copying AWAY from the local file system
-        #dbutils.fs.cp(source_file_path, f"dbfs://{active_file_path}")
-        shutil.copyfile(source_file_path, active_file_path)
+        # file is valid, copy it to target
+        active_file_path = os.path.join(
+            target_directory, f"{name}_v{version}_{file_hash}{ext}"
+        )
+        # copy it from the local because that's an NVME and the original
+        # source is a goofys mounted s3 bucket
+        shutil.copyfile(local_file_path, active_file_path)
         ingested_at = datetime.datetime.now()
-        LOGGER.debug(f"File copied in {time.time() - start:.2f}s")
+        LOGGER.debug(
+            f"File copied from {local_file_path} to {active_file_path}"
+        )
 
-        # Create a new inventory row
+        # Create a inventory entry for this file
         new_entry = Row(
             ingested_at=ingested_at,
             source_file_path=source_file_path,
@@ -208,60 +194,30 @@ def process_file(
         raise
 
 
-def build_file_info(file_info, pattern, start_date, end_date):
-    """Process a single FileInfo object from dbutils.fs.ls.
-
-    Args:
-        file_info: A FileInfo object with attributes .path, .modificationTime, etc.
-
-    Returns:
-        dict or None: A dictionary with file_date, path, and file_modification_time,
-            or None if the file doesn't match the filter criteria.
-    """
-    filename = os.path.basename(file_info.path)
-    match = pattern.search(filename)
-    if not match:
-        return None
-    try:
-        file_date = datetime.datetime.strptime(
-            match.group(1), "%Y-%m-%d"
-        ).date()
-    except Exception as e:
-        return None
-    if not (start_date <= file_date <= end_date):
-        return None
-
-    return {
-        "file_date": file_date,
-        "path": file_info.path,
-        "file_modification_time": datetime.datetime.fromtimestamp(
-            file_info.modificationTime / 1000
-        ),
-    }
-
-
 def main():
     """Entrypoint."""
     global_start_time = time.time()
     schema_fqdn_path = get_catalog_schema_fqdn()
+    LOGGER.debug(f"Create a schema at {schema_fqdn_path} if not exists")
     create_schema_if_not_exists(schema_fqdn_path)
     target_volume_fqdn_path = f"{schema_fqdn_path}.{ERA5_STAGING_VOLUME_ID}"
-    LOGGER.debug(f"create a volume at {target_volume_fqdn_path}")
+    LOGGER.debug(f"Create a volume at {target_volume_fqdn_path} if not exists")
     spark.sql(f"CREATE VOLUME IF NOT EXISTS {target_volume_fqdn_path}")
 
     target_directory = os.path.join(
         "/Volumes", target_volume_fqdn_path.replace(".", "/")
     )
 
-    LOGGER.warning(f"volume created, target directory is: {target_directory}")
+    LOGGER.debug(f"Target directory is: {target_directory}")
 
     table_definition = load_table_struct(
         ERA5_INVENTORY_TABLE_DEFINITION_PATH, ERA5_INVENTORY_TABLE_NAME
     )
     inventory_table_fqdn = f"{schema_fqdn_path}.{ERA5_INVENTORY_TABLE_NAME}"
-    LOGGER.debug(f"creating {inventory_table_fqdn}")
+    LOGGER.debug(f"Creating inventory table at {inventory_table_fqdn}")
     create_table(inventory_table_fqdn, table_definition)
-    LOGGER.debug(f"created {inventory_table_fqdn} successfully")
+
+    LOGGER.debug(f"Query most recent date from {inventory_table_fqdn}")
     latest_date_query = f"""
         SELECT MAX(data_date) AS latest_date
         FROM {inventory_table_fqdn}
@@ -283,22 +239,23 @@ def main():
     source_directory = os.path.join(ERA5_SOURCE_VOLUME_PATH, "daily_summary")
     LOGGER.debug(f"about to search {source_directory}")
 
-    # This is the hard-coded pattern for era5 daily
+    # This is the hard-coded pattern for era5 daily netcdf files
     pattern = re.compile(r"reanalysis-era5-sfc-daily-(\d{4}-\d{2}-\d{2})\.nc$")
 
-    LOGGER.info(f"search for files between {start_date} and {end_date} v3")
+    LOGGER.info(f"search for files between {start_date} and {end_date}")
     files_to_process = sorted(
         [
             {
                 "file_date": file_date,
                 # dbfs ls gives us prefixed with dbfs// so we strip it here
-                "path": file_info.path.strip('dbfs:'),
+                "path": file_info.path.strip("dbfs:"),
                 # dbutils.fs does time in ms, so convert to seconds w/ / 1000
                 "file_modification_time": datetime.datetime.fromtimestamp(
                     file_info.modificationTime / 1000
                 ),
             }
-            for file_info in dbutils.fs.ls(f"dbfs://{source_directory}")
+            # prefix with dbfs: because it's faster
+            for file_info in dbutils.fs.ls(f"dbfs:{source_directory}")
             if (match := pattern.search(os.path.basename(file_info.path)))
             and (  # noqa: W503
                 file_date := datetime.datetime.strptime(
@@ -309,47 +266,55 @@ def main():
         ],
         key=lambda x: x["file_date"],
     )
-    #files_to_process = files_to_process[:176]  # this was for debugging a fast set
     LOGGER.info(
         f"filtered {len(files_to_process)} in {time.time()-start_time:.2f}s"
     )
 
-    start = time.time()
+    # it's faster to create these file hash and version count lookups in
+    # one shot rather than individual calls to the database
+    LOGGER.info(f"Get existing file hashes from {inventory_table_fqdn}")
     existing_hashes_df = spark.sql(
         f"SELECT file_hash FROM {inventory_table_fqdn}"
     )
     existing_hash_dict = {row.file_hash for row in existing_hashes_df.collect()}
+
+    LOGGER.info(f"Get existing file count from {inventory_table_fqdn}")
     counts_df = spark.sql(
         f"""
-        SELECT source_file_path, COUNT(*) as cnt 
+        SELECT source_file_path, COUNT(*) as cnt
         FROM {inventory_table_fqdn}
         GROUP BY source_file_path
         """
     )
-    # it's faster to create a lookup in one shot rather than individual calls
     ingested_file_count_dict = collections.defaultdict(
         int,
         {row["source_file_path"]: row["cnt"] for row in counts_df.collect()},
     )
-    LOGGER.debug(f"took {time.time()-start:.2f}s to create database lookups")
 
-    #new_entries = []
-    start = time.time()
-
-    num_slices = 16*4*4
+    # get the number of cpus that Spark will use to parallelize for splitting
     sc = SparkContext.getOrCreate()
-    LOGGER.info(f'sending to parallelize {len(files_to_process)} among {num_slices} slices')
-    files_rdd = sc.parallelize(files_to_process, numSlices=num_slices)  # 4 per core
+    num_cpus = sc.defaultParallelism
+    num_slices = num_cpus * 4  # 4 slices per CPU works well from testing
+    LOGGER.info(
+        f"sending to parallelize {len(files_to_process)} among "
+        f"{num_slices} slices"
+    )
+    files_rdd = sc.parallelize(files_to_process, numSlices=num_slices)
 
-    results = files_rdd.map(
+    _ = files_rdd.map(
         lambda file_info: process_file_node_batch(
             file_info,
-            LOCAL_EPHEMERAL_PATH,
-            target_directory,
-            existing_hash_dict,
-            ingested_file_count_dict,
+            # pass the fixed args to process file as a dict so we don't tramp
+            # the arguments from manager to worker
+            {
+                "local_directory": LOCAL_EPHEMERAL_PATH,
+                "target_directory": target_directory,
+                "existing_hash_dict": existing_hash_dict,
+                "ingested_file_count_dict": ingested_file_count_dict,
+            },
             inventory_table_fqdn,
-        )).collect()
+        )
+    ).collect()
 
     LOGGER.info(f"ALL DONE! took {time.time()-global_start_time:.2f}s")
 
