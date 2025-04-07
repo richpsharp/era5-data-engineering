@@ -18,7 +18,7 @@ from config import ERA5_STAGING_VOLUME_ID
 from databricks.sdk.runtime import spark
 from pyspark.sql import Row
 
-# from tqdm import tqdm
+from tqdm import tqdm
 from utils.catalog_support import get_catalog_schema_fqdn
 from utils.catalog_support import create_schema_if_not_exists
 from utils.file_utils import hash_file
@@ -158,9 +158,6 @@ def process_file(
                 f"File with hash {file_hash} already ingested; skipping "
                 f"{source_file_path}"
             )
-            return {
-                "error": f"File with hash {file_hash} already ingested; skip"
-            }
             return None
 
         # file is valid, copy it to target
@@ -299,43 +296,20 @@ def main():
     # get the number of cpus that Spark will use to parallelize for splitting
     sc = SparkContext.getOrCreate()
     num_cpus = sc.defaultParallelism
-    num_slices = num_cpus * 4  # 4 slices per CPU works well from testing
+    num_partitions = num_cpus * 4  # 4 slices per CPU works well from testing
     
 
     batch_size = 4
     batches_to_process = [files_to_process[i:i+batch_size] for i in range(0, len(files_to_process), batch_size)]
     LOGGER.info(
         f"sending to parallelize {len(batches_to_process)} batches among "
-        f"{num_slices} slices"
+        f"{num_partitions} slices"
     )
 
-    """
-    for file_infos_to_process in batches_to_process:
-        f = lambda file_infos_to_process: process_file_node_batch(
-            file_infos_to_process,
-            # pass the fixed args to process file as a dict so we don't tramp
-            # the arguments from manager to worker
-            {
-                "local_directory": LOCAL_EPHEMERAL_PATH,
-                "target_directory": target_directory,
-                "existing_hash_dict": existing_hash_dict,
-                "ingested_file_count_dict": ingested_file_count_dict,
-            },
-            inventory_table_fqdn,
-        )
-        LOGGER.info(file_infos_to_process)
-        new_inventory_entries = f(file_infos_to_process)
-        if new_inventory_entries:
-            new_df = spark.createDataFrame(new_inventory_entries)
-            new_df.write.format("delta").mode("append").saveAsTable(
-                inventory_table_fqdn
-            )
-    """
-
-    files_rdd = sc.parallelize(batches_to_process, numSlices=num_slices)
+    files_rdd = sc.parallelize(batches_to_process, numSlices=num_partitions)
 
     # Process each batch partition as soon as it's ready
-    for new_inventory_entries in files_rdd.map(
+    mapped_rdd = files_rdd.map(
         lambda file_infos_to_process: process_file_node_batch(
             file_infos_to_process,
             {
@@ -346,7 +320,9 @@ def main():
             },
             inventory_table_fqdn,
         )
-    ).toLocalIterator():
+    )
+
+    for new_inventory_entries in tqdm(mapped_rdd.toLocalIterator(), total=num_partitions):
         if new_inventory_entries:
             new_df = spark.createDataFrame(new_inventory_entries)
             new_df.write.format('delta').mode('append').saveAsTable(inventory_table_fqdn)
