@@ -297,7 +297,7 @@ def main():
     num_cpus = sc.defaultParallelism
     num_partitions = num_cpus * 4  # 4 slices per CPU works well from testing
     # a batch size of 4 on a single CPU works well from testing
-    batch_size = 4
+    batch_size = 2
 
     batches_to_process = [
         files_to_process[i : i + batch_size]  # noqa: E203
@@ -328,8 +328,9 @@ def main():
         mapped_rdd.toLocalIterator(), total=num_partitions
     ):
         if new_inventory_entries:
+            LOGGER.debug(f'RESULT: {new_inventory_entries}')
             new_df = spark.createDataFrame(new_inventory_entries)
-            new_df.write.format("delta").mode("append").saveAsTable()
+            new_df.write.format("delta").mode("append").saveAsTable(inventory_table_fqdn)
 
     LOGGER.info(f"ALL DONE! took {time.time()-global_start_time:.2f}s")
 
