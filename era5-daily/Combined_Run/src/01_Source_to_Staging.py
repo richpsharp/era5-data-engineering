@@ -195,7 +195,6 @@ def process_file(
             LOGGER.exception(f"could not remove {local_file_path}, skipping")
 
 
-
 def main():
     """Entrypoint."""
     global_start_time = time.time()
@@ -297,10 +296,13 @@ def main():
     sc = SparkContext.getOrCreate()
     num_cpus = sc.defaultParallelism
     num_partitions = num_cpus * 4  # 4 slices per CPU works well from testing
-    
-
+    # a batch size of 4 on a single CPU works well from testing
     batch_size = 4
-    batches_to_process = [files_to_process[i:i+batch_size] for i in range(0, len(files_to_process), batch_size)]
+
+    batches_to_process = [
+        files_to_process[i : i + batch_size]  # noqa: E203
+        for i in range(0, len(files_to_process), batch_size)
+    ]
     LOGGER.info(
         f"sending to parallelize {len(batches_to_process)} batches among "
         f"{num_partitions} slices"
@@ -313,21 +315,21 @@ def main():
         lambda file_infos_to_process: process_file_node_batch(
             file_infos_to_process,
             {
-                'local_directory': LOCAL_EPHEMERAL_PATH,
-                'target_directory': target_directory,
-                'existing_hash_dict': existing_hash_dict,
-                'ingested_file_count_dict': ingested_file_count_dict,
+                "local_directory": LOCAL_EPHEMERAL_PATH,
+                "target_directory": target_directory,
+                "existing_hash_dict": existing_hash_dict,
+                "ingested_file_count_dict": ingested_file_count_dict,
             },
             inventory_table_fqdn,
         )
     )
 
-    for new_inventory_entries in tqdm(mapped_rdd.toLocalIterator(), total=num_partitions):
+    for new_inventory_entries in tqdm(
+        mapped_rdd.toLocalIterator(), total=num_partitions
+    ):
         if new_inventory_entries:
             new_df = spark.createDataFrame(new_inventory_entries)
-            new_df.write.format('delta').mode('append').saveAsTable(inventory_table_fqdn)
-
-
+            new_df.write.format("delta").mode("append").saveAsTable()
 
     LOGGER.info(f"ALL DONE! took {time.time()-global_start_time:.2f}s")
 
