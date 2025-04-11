@@ -1,4 +1,3 @@
-%python
 """ERA5 source to staging pipeline."""
 
 import shutil
@@ -19,7 +18,6 @@ from config import ERA5_STAGING_VOLUME_ID
 from databricks.sdk.runtime import spark
 from pyspark.sql import Row
 
-from tqdm import tqdm
 from utils.catalog_support import get_catalog_schema_fqdn
 from utils.catalog_support import create_schema_if_not_exists
 from utils.file_utils import hash_file
@@ -69,7 +67,9 @@ def process_file_node_batch(
         None
     """
     start = time.time()
-    with ThreadPoolExecutor(max_workers=min(len(files_to_process), 4)) as executor:
+    with ThreadPoolExecutor(
+        max_workers=min(len(files_to_process), 4)
+    ) as executor:
         process_file_futures = [
             executor.submit(
                 process_file, **dict(process_file_args, file_info=file_info)
@@ -85,7 +85,6 @@ def process_file_node_batch(
     ]
 
     return new_inventory_entries
-    LOGGER.debug(f"all done batch in {time.time()-start:.2f}s")
 
 
 def process_file(
@@ -219,6 +218,20 @@ def main():
     LOGGER.info(f"Creating inventory table at {inventory_table_fqdn}")
     create_table(inventory_table_fqdn, table_definition)
 
+    now = datetime.datetime.now()
+    test_entry = Row(
+        ingested_at=now,
+        source_file_path="TEST",
+        file_hash="TEST",
+        active_file_path="TEST",
+        source_modified_at=now,
+        data_date=now.date(),
+    )
+    test_df = spark.createDataFrame([test_entry])
+    test_df.write.format("delta").mode("append").saveAsTable(
+        inventory_table_fqdn
+    )
+
     LOGGER.info(f"Query most recent date from {inventory_table_fqdn}")
     latest_date_query = f"""
         SELECT MAX(data_date) AS latest_date
@@ -265,7 +278,9 @@ def main():
                 ).date()
             )
             and start_date <= file_date <= end_date  # noqa: W503
-        ],
+        ][
+            :1
+        ],  # TODO: put [0] here for debugging
         key=lambda x: x["file_date"],
     )
     LOGGER.info(
@@ -309,7 +324,11 @@ def main():
         f"{num_partitions} slices"
     )
 
-    files_rdd = sc.parallelize(batches_to_process, numSlices=num_partitions)
+    # files_rdd = sc.parallelize(batches_to_process, numSlices=num_partitions)
+    files_rdd = spark.createDataFrame(
+        [(b,) for b in batches_to_process], ["batch"]
+    )
+
     # Process each batch partition as soon as it's ready
     start = time.time()
     nested_new_inventory_entries = files_rdd.map(
@@ -324,16 +343,22 @@ def main():
             inventory_table_fqdn,
         )
     ).collect()
-    
-    new_inventory_entries = [
-        x for local_inventory_entries in nested_new_inventory_entries 
-        for x in local_inventory_entries]
 
-    LOGGER.info(f"ALL DONE! took {time.time()-global_start_time:.4f}s {(time.time()-start)/len(files_to_process):.2f}s for {len(new_inventory_entries)}")
+    new_inventory_entries = [
+        x
+        for local_inventory_entries in nested_new_inventory_entries
+        for x in local_inventory_entries
+    ]
+
+    LOGGER.info(
+        f"ALL DONE! took {time.time()-global_start_time:.4f}s {(time.time()-start)/len(files_to_process):.2f}s for {len(new_inventory_entries)}"
+    )
     if new_inventory_entries:
         new_df = spark.createDataFrame(new_inventory_entries)
-        new_df.write.format("delta").mode("append").saveAsTable(inventory_table_fqdn)
-    
-    
+        new_df.write.format("delta").mode("append").saveAsTable(
+            inventory_table_fqdn
+        )
+
+
 if __name__ == "__main__":
     main()

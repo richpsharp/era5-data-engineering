@@ -1,3 +1,20 @@
-From today:
-* Get pipeline assembled, parallelized, and stable
-* Run on a test DAB
+Today:
+* Get DB pipeline working manually
+    * I am not able to get the injection into the table right, seems like a permission things
+    * I think there's an issue with determining which catalog to reference,
+        I think that should be a "job parameter" when running the job and
+        if it doesn't exist default to sandbox. I otherwise have an error about
+        whitlisting some permissions, i think for a table, but i don't know
+        what table it is making.
+* Get DB pipeline working via git actions? Or pull request first?
+
+For later:
+* Work on the pest trait pipeline
+    * Chnage to stages so we have
+        x pull searches
+        x pull websites
+        x process websites -- in progress
+        x NLP part
+            x scrubbing the websites so it just has relevant info in progress
+            x need to run the LLM questions on the scrubbed websites
+        * Fix issue of vote counting gone wrong
