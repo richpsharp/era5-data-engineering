@@ -24,3 +24,18 @@ targets:
               spark_python_task:
                 python_file: src/01_Source_to_Staging.py
               existing_cluster_id: "0406-134207-et9icx79"
+  parallel_test:
+    mode: development
+    workspace:
+      # Databricks workspace host URL is not considered sensitive information
+      host: https://dbc-ad3d47af-affb.cloud.databricks.com/
+
+    resources:
+      jobs:
+        parallel_test:
+          name: "parallel_test"
+          tasks:
+            - task_key: parallel_test
+              spark_python_task:
+                python_file: src/parallel_test.py
+              existing_cluster_id: "0406-134207-et9icx79"

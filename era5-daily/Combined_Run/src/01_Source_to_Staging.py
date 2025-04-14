@@ -24,7 +24,10 @@ from utils.file_utils import hash_file
 from utils.file_utils import is_netcdf_file_valid
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
-from pyspark import SparkContext
+from pyspark.sql import SparkSession
+from pyspark.sql import udf, col
+from pyspark.sql.types import ArrayType
+
 
 try:
     dbutils  # Check if dbutils is defined
@@ -211,12 +214,12 @@ def main():
 
     LOGGER.info(f"Target directory is: {target_directory}")
 
-    table_definition = load_table_struct(
+    inventory_table_sql_schema = load_table_struct(
         ERA5_INVENTORY_TABLE_DEFINITION_PATH, ERA5_INVENTORY_TABLE_NAME
     )
     inventory_table_fqdn = f"{schema_fqdn_path}.{ERA5_INVENTORY_TABLE_NAME}"
     LOGGER.info(f"Creating inventory table at {inventory_table_fqdn}")
-    create_table(inventory_table_fqdn, table_definition)
+    create_table(inventory_table_fqdn, inventory_table_sql_schema)
 
     now = datetime.datetime.now()
     test_entry = Row(
@@ -308,10 +311,10 @@ def main():
         {row["source_file_path"]: row["cnt"] for row in counts_df.collect()},
     )
 
-    # get the number of cpus that Spark will use to parallelize for splitting
-    sc = SparkContext.getOrCreate()
-    num_cpus = sc.defaultParallelism
-    # 4 jobs per cpu is good for the goofys file deamon throughput
+    spark = SparkSession.builder.getOrCreate()
+    num_cpus = spark.sparkContext.defaultParallelism
+    # I tested this manually and found 4 jobs per cpu is good for the goofys
+    # file deamon throughput
     jobs_per_cpu = 4
     batches_to_process = [
         files_to_process[i : i + jobs_per_cpu]  # noqa: E203
@@ -324,37 +327,53 @@ def main():
         f"{num_partitions} slices"
     )
 
-    # files_rdd = sc.parallelize(batches_to_process, numSlices=num_partitions)
-    files_rdd = spark.createDataFrame(
+    process_file_node_batch_udf = udf(
+        process_file_node_batch, ArrayType(inventory_table_sql_schema)
+    )
+
+    file_batch_df = spark.createDataFrame(
         [(b,) for b in batches_to_process], ["batch"]
     )
 
+    new_inventory_entry_lists = process_file_node_batch_udf(col("batch"))
+
+    # new_inventory_entries = [
+    #     x
+    #     for local_inventory_entries in nested_new_inventory_entries
+    #     for x in local_inventory_entries
+    # ]
+
+    # # files_rdd = sc.parallelize(batches_to_process, numSlices=num_partitions)
+    # files_rdd = spark.createDataFrame(
+    #     [(b,) for b in batches_to_process], ["batch"]
+    # )
+
     # Process each batch partition as soon as it's ready
     start = time.time()
-    nested_new_inventory_entries = files_rdd.map(
-        lambda file_infos_to_process: process_file_node_batch(
-            file_infos_to_process,
-            {
-                "local_directory": LOCAL_EPHEMERAL_PATH,
-                "target_directory": target_directory,
-                "existing_hash_dict": existing_hash_dict,
-                "ingested_file_count_dict": ingested_file_count_dict,
-            },
-            inventory_table_fqdn,
-        )
-    ).collect()
+    # nested_new_inventory_entries = files_rdd.map(
+    #     lambda file_infos_to_process: process_file_node_batch(
+    #         file_infos_to_process,
+    #         {
+    #             "local_directory": LOCAL_EPHEMERAL_PATH,
+    #             "target_directory": target_directory,
+    #             "existing_hash_dict": existing_hash_dict,
+    #             "ingested_file_count_dict": ingested_file_count_dict,
+    #         },
+    #         inventory_table_fqdn,
+    #     )
+    # ).collect()
 
-    new_inventory_entries = [
-        x
-        for local_inventory_entries in nested_new_inventory_entries
-        for x in local_inventory_entries
-    ]
+    # new_inventory_entries = [
+    #     x
+    #     for local_inventory_entries in nested_new_inventory_entries
+    #     for x in local_inventory_entries
+    # ]
 
     LOGGER.info(
         f"ALL DONE! took {time.time()-global_start_time:.4f}s {(time.time()-start)/len(files_to_process):.2f}s for {len(new_inventory_entries)}"
     )
-    if new_inventory_entries:
-        new_df = spark.createDataFrame(new_inventory_entries)
+    if new_inventory_entry_lists:
+        new_df = spark.createDataFrame(new_inventory_entry_lists)
         new_df.write.format("delta").mode("append").saveAsTable(
             inventory_table_fqdn
         )
