@@ -335,6 +335,8 @@ def main():
         "new_inventory", process_file_node_batch_udf(col("batch"))
     )
     nested_new_inventory_dfs.show()
+    # explode out the arrays and then "select" the entires so they expand into
+    # columns which match the schema for the table at `inventory_table_fqdn`
     inventory_entries_df = nested_new_inventory_dfs.select(
         explode(col("new_inventory")).alias("inventory_entry")
     ).select("inventory_entry.*")
