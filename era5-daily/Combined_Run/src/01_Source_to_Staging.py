@@ -134,10 +134,10 @@ def process_file(
             dictionary with an "error" key describing the issue encountered.
     """
     try:
-        LOGGER.debug(f"current file info: {file_info}")
+        print(f"current file info: {file_info}")
         sys.stdout.flush()
         source_file_path = file_info["path"]
-        LOGGER.debug(f"Processing {source_file_path}")
+        print(f"Processing {source_file_path}")
         sys.stdout.flush()
         local_file_path = os.path.join(
             local_directory, os.path.basename(source_file_path)
@@ -146,7 +146,7 @@ def process_file(
             # This could happen during sandboxing with a leftover file
             os.remove(local_file_path)
         shutil.copyfile(source_file_path, local_file_path)
-        LOGGER.debug(f"Copied {local_file_path}")
+        print(f"Copied {local_file_path}")
         sys.stdout.flush()
 
         # Determine the file version defined as the count of previous copies+1
