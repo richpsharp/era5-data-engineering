@@ -221,20 +221,6 @@ def main():
     LOGGER.info(f"Creating inventory table at {inventory_table_fqdn}")
     create_table(inventory_table_fqdn, inventory_table_sql_schema)
 
-    now = datetime.datetime.now()
-    test_entry = Row(
-        ingested_at=now,
-        source_file_path="TEST",
-        file_hash="TEST",
-        active_file_path="TEST",
-        source_modified_at=now,
-        data_date=now.date(),
-    )
-    test_df = spark.createDataFrame([test_entry])
-    test_df.write.format("delta").mode("append").saveAsTable(
-        inventory_table_fqdn
-    )
-
     LOGGER.info(f"Query most recent date from {inventory_table_fqdn}")
     latest_date_query = f"""
         SELECT MAX(data_date) AS latest_date
