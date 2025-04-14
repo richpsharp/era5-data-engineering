@@ -310,7 +310,6 @@ def main():
         {row["source_file_path"]: row["cnt"] for row in counts_df.collect()},
     )
 
-    num_cpus = spark.sparkContext.defaultParallelism
     # I tested this manually and found 4 jobs per cpu is good for the goofys
     # file deamon throughput
     jobs_per_cpu = 4
@@ -318,12 +317,6 @@ def main():
         files_to_process[i : i + jobs_per_cpu]  # noqa: E203
         for i in range(0, len(files_to_process), jobs_per_cpu)
     ]
-    # 4 slices per CPU works well from testing
-    num_partitions = num_cpus * 4
-    LOGGER.info(
-        f"sending to parallelize {len(batches_to_process)} batches among "
-        f"{num_partitions} slices"
-    )
 
     process_file_node_batch_udf = udf(
         process_file_node_batch, ArrayType(inventory_table_sql_schema)
@@ -335,48 +328,17 @@ def main():
 
     start = time.time()
     new_inventory_entry_lists = process_file_node_batch_udf(col("batch"))
-
-    # new_inventory_entries = [
-    #     x
-    #     for local_inventory_entries in nested_new_inventory_entries
-    #     for x in local_inventory_entries
-    # ]
-
-    # # files_rdd = sc.parallelize(batches_to_process, numSlices=num_partitions)
-    # files_rdd = spark.createDataFrame(
-    #     [(b,) for b in batches_to_process], ["batch"]
-    # )
-
-    # Process each batch partition as soon as it's ready
-    
-    # nested_new_inventory_entries = files_rdd.map(
-    #     lambda file_infos_to_process: process_file_node_batch(
-    #         file_infos_to_process,
-    #         {
-    #             "local_directory": LOCAL_EPHEMERAL_PATH,
-    #             "target_directory": target_directory,
-    #             "existing_hash_dict": existing_hash_dict,
-    #             "ingested_file_count_dict": ingested_file_count_dict,
-    #         },
-    #         inventory_table_fqdn,
-    #     )
-    # ).collect()
-
-    # new_inventory_entries = [
-    #     x
-    #     for local_inventory_entries in nested_new_inventory_entries
-    #     for x in local_inventory_entries
-    # ]
-
     LOGGER.info(
-        f"ALL DONE! took {time.time()-global_start_time:.4f}s {(time.time()-start)/len(files_to_process):.2f}s for {len(new_inventory_entry_lists)}"
+        f"ALL DONE! took {time.time()-global_start_time:.4f}s {(time.time()-start)/len(files_to_process):.2f}s per file"
     )
     if new_inventory_entry_lists:
         new_df = spark.createDataFrame(new_inventory_entry_lists)
+        LOGGER.debug(new_inventory_entry_lists)
+        LOGGER.debug(inventory_table_fqdn)
         new_df.write.format("delta").mode("append").saveAsTable(
             inventory_table_fqdn
         )
-
+        
 
 if __name__ == "__main__":
     main()
