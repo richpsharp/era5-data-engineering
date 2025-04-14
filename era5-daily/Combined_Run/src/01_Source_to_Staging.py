@@ -1,5 +1,6 @@
 """ERA5 source to staging pipeline."""
 
+from functools import partial
 import shutil
 import datetime
 from dateutil.relativedelta import relativedelta
@@ -49,7 +50,6 @@ DELTA_MONTHS = 3  # always search at least 3 months prior
 def process_file_node_batch(
     files_to_process,
     process_file_args,
-    inventory_table_fqdn,
 ):
     """Processes a batch of files concurrently on a single node.
 
@@ -63,8 +63,6 @@ def process_file_node_batch(
             processed.
         process_file_args (dict): Dictionary of arguments to pass to
             `process_file`.
-        inventory_table_fqdn (str): Fully-qualified Delta table name
-            (database.table) for recording processed file metadata.
 
     Returns:
         list[Row]: A list of inventory entries as Row objects.
@@ -308,15 +306,24 @@ def main():
         [(b,) for b in batches_to_process], ["batch"]
     )
 
-    process_file_node_batch_udf = udf(
-        process_file_node_batch, ArrayType(inventory_table_sql_schema)
-    )
-
     start = time.time()
     # this does the "parallel" spark call because it's calling the
     # process_file_node_batch_udf against the "batch" column of
     # `file_batch_df` and puts the result in "new_inventory" column on the
     # same row
+    process_file_args = {
+        "local_directory": LOCAL_EPHEMERAL_PATH,
+        "target_directory": target_directory,
+        "existing_hash_dict": existing_hash_dict,
+        "ingested_file_count_dict": ingested_file_count_dict,
+    }
+    partial_process_file_node_batch = partial(
+        process_file_node_batch,
+        process_file_args=process_file_args,
+    )
+    process_file_node_batch_udf = udf(
+        partial_process_file_node_batch, ArrayType(inventory_table_sql_schema)
+    )
     nested_new_inventory_dfs = file_batch_df.withColumn(
         "new_inventory", process_file_node_batch_udf(col("batch"))
     )
