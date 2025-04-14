@@ -135,8 +135,10 @@ def process_file(
     """
     try:
         LOGGER.debug(f"current file info: {file_info}")
+        sys.stdout.flush()
         source_file_path = file_info["path"]
         LOGGER.debug(f"Processing {source_file_path}")
+        sys.stdout.flush()
         local_file_path = os.path.join(
             local_directory, os.path.basename(source_file_path)
         )
@@ -145,6 +147,7 @@ def process_file(
             os.remove(local_file_path)
         shutil.copyfile(source_file_path, local_file_path)
         LOGGER.debug(f"Copied {local_file_path}")
+        sys.stdout.flush()
 
         # Determine the file version defined as the count of previous copies+1
         version = ingested_file_count_dict[source_file_path] + 1
