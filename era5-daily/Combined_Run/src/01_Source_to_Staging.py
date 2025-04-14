@@ -1,5 +1,6 @@
 """ERA5 source to staging pipeline."""
 
+import sys
 from functools import partial
 import shutil
 import datetime
@@ -38,6 +39,15 @@ except NameError:
     dbutils = DBUtils(spark)
 
 LOGGER = logging.getLogger(__name__)
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+handler.setFormatter(formatter)
+LOGGER.addHandler(handler)
+
 LOGGER.setLevel(logging.DEBUG)
 
 
