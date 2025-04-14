@@ -25,7 +25,7 @@ from utils.file_utils import is_netcdf_file_valid
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
 from pyspark.sql import SparkSession
-from pyspark.sql import udf, col
+from pyspark.sql.functions import udf, col
 from pyspark.sql.types import ArrayType
 
 
@@ -42,7 +42,7 @@ LOGGER.setLevel(logging.DEBUG)
 
 # data starts here and we'll use it to set a threshold for when the data should
 # be pulled
-ERA5_START_DATE = datetime.datetime(1950, 1, 1).date()
+ERA5_START_DATE = datetime.datetime(2024, 4, 4).date()
 DELTA_MONTHS = 3  # always search at least 3 months prior
 
 
@@ -201,6 +201,7 @@ def process_file(
 def main():
     """Entrypoint."""
     global_start_time = time.time()
+    spark = SparkSession.builder.getOrCreate()
     schema_fqdn_path = get_catalog_schema_fqdn()
     LOGGER.info(f"Create a schema at {schema_fqdn_path} if not exists")
     create_schema_if_not_exists(schema_fqdn_path)
@@ -231,9 +232,7 @@ def main():
         data_date=now.date(),
     )
     test_df = spark.createDataFrame([test_entry])
-    test_df.write.format("delta").mode("append").saveAsTable(
-        inventory_table_fqdn
-    )
+    test_df.write.format('delta').mode('append').saveAsTable(inventory_table_fqdn)
 
     LOGGER.info(f"Query most recent date from {inventory_table_fqdn}")
     latest_date_query = f"""
@@ -311,7 +310,6 @@ def main():
         {row["source_file_path"]: row["cnt"] for row in counts_df.collect()},
     )
 
-    spark = SparkSession.builder.getOrCreate()
     num_cpus = spark.sparkContext.defaultParallelism
     # I tested this manually and found 4 jobs per cpu is good for the goofys
     # file deamon throughput
@@ -335,6 +333,7 @@ def main():
         [(b,) for b in batches_to_process], ["batch"]
     )
 
+    start = time.time()
     new_inventory_entry_lists = process_file_node_batch_udf(col("batch"))
 
     # new_inventory_entries = [
@@ -349,7 +348,7 @@ def main():
     # )
 
     # Process each batch partition as soon as it's ready
-    start = time.time()
+    
     # nested_new_inventory_entries = files_rdd.map(
     #     lambda file_infos_to_process: process_file_node_batch(
     #         file_infos_to_process,
@@ -370,7 +369,7 @@ def main():
     # ]
 
     LOGGER.info(
-        f"ALL DONE! took {time.time()-global_start_time:.4f}s {(time.time()-start)/len(files_to_process):.2f}s for {len(new_inventory_entries)}"
+        f"ALL DONE! took {time.time()-global_start_time:.4f}s {(time.time()-start)/len(files_to_process):.2f}s for {len(new_inventory_entry_lists)}"
     )
     if new_inventory_entry_lists:
         new_df = spark.createDataFrame(new_inventory_entry_lists)
