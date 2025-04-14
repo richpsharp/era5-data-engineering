@@ -25,7 +25,7 @@ from utils.file_utils import is_netcdf_file_valid
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import udf, col
+from pyspark.sql.functions import udf, col, explode
 from pyspark.sql.types import ArrayType
 
 
@@ -67,9 +67,8 @@ def process_file_node_batch(
             (database.table) for recording processed file metadata.
 
     Returns:
-        None
+        list[Row]: A list of inventory entries as Row objects.
     """
-    start = time.time()
     with ThreadPoolExecutor(
         max_workers=min(len(files_to_process), 4)
     ) as executor:
@@ -232,7 +231,9 @@ def main():
         data_date=now.date(),
     )
     test_df = spark.createDataFrame([test_entry])
-    test_df.write.format('delta').mode('append').saveAsTable(inventory_table_fqdn)
+    test_df.write.format("delta").mode("append").saveAsTable(
+        inventory_table_fqdn
+    )
 
     LOGGER.info(f"Query most recent date from {inventory_table_fqdn}")
     latest_date_query = f"""
@@ -317,28 +318,35 @@ def main():
         files_to_process[i : i + jobs_per_cpu]  # noqa: E203
         for i in range(0, len(files_to_process), jobs_per_cpu)
     ]
+    file_batch_df = spark.createDataFrame(
+        [(b,) for b in batches_to_process], ["batch"]
+    )
 
     process_file_node_batch_udf = udf(
         process_file_node_batch, ArrayType(inventory_table_sql_schema)
     )
 
-    file_batch_df = spark.createDataFrame(
-        [(b,) for b in batches_to_process], ["batch"]
-    )
-
     start = time.time()
-    new_inventory_entry_lists = process_file_node_batch_udf(col("batch"))
+    # this does the "parallel" spark call because it's calling the
+    # process_file_node_batch_udf against the "batch" column of
+    # `file_batch_df` and puts the result in "new_inventory" column on the
+    # same row
+    nested_new_inventory_dfs = file_batch_df.withColumn(
+        "new_inventory", process_file_node_batch_udf(col("batch"))
+    )
+    nested_new_inventory_dfs.show()
+    inventory_entries_df = nested_new_inventory_dfs.select(
+        explode(col("new_inventory")).alias("inventory_entry")
+    ).select("inventory_entry.*")
+    inventory_entries_df.show()
+
+    inventory_entries_df.write.format("delta").mode("append").saveAsTable(
+        inventory_table_fqdn
+    )
     LOGGER.info(
         f"ALL DONE! took {time.time()-global_start_time:.4f}s {(time.time()-start)/len(files_to_process):.2f}s per file"
     )
-    if new_inventory_entry_lists:
-        new_df = spark.createDataFrame(new_inventory_entry_lists)
-        LOGGER.debug(new_inventory_entry_lists)
-        LOGGER.debug(inventory_table_fqdn)
-        new_df.write.format("delta").mode("append").saveAsTable(
-            inventory_table_fqdn
-        )
-        
+
 
 if __name__ == "__main__":
     main()
