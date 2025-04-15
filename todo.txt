@@ -15,6 +15,11 @@ Today:
             era5-principal.
 * What is the naming convention we should use?
     * I'm confused about using branches to define dev or staging or prod or whatever, what is it
+        * Look at databricks.yaml, to me that is where 'dev' and 'prod' are defined?
+            * Or else we pull dev/prod from the branch name? just seems like it's duplciated around
+    * I propose using _ instead of - whenever we name catalog/schema, handles
+        better in database
+
 
 * Get DB pipeline working via git actions? Or pull request first?
 
