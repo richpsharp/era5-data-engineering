@@ -54,7 +54,7 @@ logging.basicConfig(
     ),
 )
 LOGGER = logging.getLogger(__name__)
-logging.getLogger("py4j").setLevel(logging.INFO)
+logging.getLogger("py4j").setLevel(logging.WARNING)
 
 
 # data starts here and we'll use it to set a threshold for when the data should
@@ -260,9 +260,7 @@ def main():
                 ).date()
             )
             and start_date <= file_date <= end_date  # noqa: W503
-        ][
-            :1
-        ],  # TODO: put [0] here for debugging
+        ],
         key=lambda x: x["file_date"],
     )
 
