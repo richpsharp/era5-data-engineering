@@ -59,6 +59,7 @@ logging.basicConfig(
     ),
 )
 LOGGER = logging.getLogger(__name__)
+# py4j is really chatty, so kicking it to warning
 logging.getLogger("py4j").setLevel(logging.WARNING)
 
 
@@ -263,7 +264,8 @@ def main():
     files_to_process = sorted(
         [
             {
-                # convert to isoformat for spark serialization which converts to a string
+                # convert to isoformat for spark serialization
+                # which otherwise converts datetime to a string
                 "file_date": file_date.isoformat(),
                 # dbfs ls gives us prefixed with dbfs// so we strip it here
                 "path": file_info.path.strip("dbfs:"),
@@ -290,7 +292,6 @@ def main():
     LOGGER.info(
         f"filtered {len(files_to_process)} in {time.time()-start_time:.2f}s"
     )
-    LOGGER.debug(files_to_process)
     # it's faster to create these file hash and version count lookups in
     # one shot rather than individual calls to the database
     LOGGER.info(f"Get existing file hashes from {inventory_table_fqdn}")
@@ -342,22 +343,23 @@ def main():
     process_file_node_batch_udf = udf(
         partial_process_file_node_batch, ArrayType(inventory_table_sql_schema)
     )
+    LOGGER.info("sending batches to process via Spark")
     nested_new_inventory_dfs = file_batch_df.withColumn(
         "new_inventory", process_file_node_batch_udf(col("batch"))
     )
-    # nested_new_inventory_dfs.show()
-    # explode out the arrays and then "select" the entires so they expand into
-    # columns which match the schema for the table at `inventory_table_fqdn`
+    # explode out the array of rows and then "select" the entires so they
+    # expand into columns which match the schema for the table at
+    # `inventory_table_fqdn`
     inventory_entries_df = nested_new_inventory_dfs.select(
         explode(col("new_inventory")).alias("inventory_entry")
     ).select("inventory_entry.*")
-    # inventory_entries_df.show()
 
     inventory_entries_df.write.format("delta").mode("append").saveAsTable(
         inventory_table_fqdn
     )
     LOGGER.info(
-        f"ALL DONE! took {time.time()-global_start_time:.4f}s {(time.time()-start)/len(files_to_process):.2f}s per file"
+        f"ALL DONE! took {time.time()-global_start_time:.4f}s "
+        f"{(time.time()-start)/len(files_to_process):.2f}s per file"
     )
 
 
