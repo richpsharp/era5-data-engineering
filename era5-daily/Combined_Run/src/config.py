@@ -6,4 +6,4 @@ ERA5_SOURCE_VOLUME_PATH = "/Volumes/aer-processed/era5"
 ERA5_STAGING_VOLUME_ID = "era5_gwsc_staging_folder_v2"
 ERA5_SOURCE_VOLUME_FQDN = "aer-processed.era5.daily_summary"
 # This is the nvme location if you use an i3.* node
-LOCAL_EPHEMERAL_PATH = "/local_disk0/"
+LOCAL_EPHEMERAL_PATH = "/local_disk0/workspace"
