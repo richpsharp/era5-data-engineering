@@ -47,6 +47,7 @@ logging.basicConfig(
     ),
 )
 LOGGER = logging.getLogger(__name__)
+logging.getLogger("py4j").setLevel(logging.INFO)
 
 
 # data starts here and we'll use it to set a threshold for when the data should
