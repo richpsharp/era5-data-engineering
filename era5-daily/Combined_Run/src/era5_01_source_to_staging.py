@@ -212,6 +212,7 @@ def main():
         "--catalog_schema", type=str, help="catalog.schema to use for the job"
     )
     args = parser.parse_args()
+    LOGGER.info(f"creating {args.catalog_schema}")
     schema_fqdn_path = get_catalog_schema_fqdn(args.catalog_schema)
 
     global_start_time = time.time()

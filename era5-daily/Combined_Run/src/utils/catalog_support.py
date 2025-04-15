@@ -29,7 +29,7 @@ def create_schema_if_not_exists(spark, schema_fqdn):
     Returns:
         None
     """
-    spark.sql(f"CREATE SCHEMA IF NOT EXISTS `{schema_fqdn}`")
+    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {schema_fqdn}")
 
     current_principal = spark.sql("SELECT current_user() AS user").collect()[0][
         "user"
@@ -38,9 +38,9 @@ def create_schema_if_not_exists(spark, schema_fqdn):
     # Grant full privileges on the schema to the current principal and to Admin.
     try:
         spark.sql(
-            f"GRANT ALL PRIVILEGES ON SCHEMA `{schema_fqdn}` TO "
-            f"`{current_principal}`"
+            f"GRANT ALL PRIVILEGES ON SCHEMA {schema_fqdn} TO "
+            f"{current_principal}"
         )
-        spark.sql(f"GRANT ALL PRIVILEGES ON SCHEMA `{schema_fqdn}` TO `Admin`")
+        spark.sql(f"GRANT ALL PRIVILEGES ON SCHEMA {schema_fqdn} TO `Admin`")
     except Exception as e:
         LOGGER.warning(f"Not all privileges were able to be set: {e}")
