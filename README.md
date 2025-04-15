@@ -57,7 +57,11 @@ Once deployed the via Github Actions, the DAB is run on Databricks which in turn
 
 For a detailed look at Databricks jobs pertaining to the DAB, the related notebooks, and how they are configured and orchestrated using YAML files, see the [`**Combined_Run**`]((era5-daily/Combined_Run) folder, which contains all necessary configurations and deployment scripts for the DAB
 
+### 3. Naming conventions
 
+Naming files, pipelines, dataproducts, and similar is based roughly on this template: ```{data product era5/cmip6}_{stage number/01/02/01a/...}_{bronze/silver/gold}_{descriptive name}_{production/development/test}_{branch name (feature)}```.
+
+Branch naming convention: `production`, `development`, `feature/`, `bugfix/`,
 
 ## Contact
 - Sambadi Majumder (smajumder1@ua.edu)

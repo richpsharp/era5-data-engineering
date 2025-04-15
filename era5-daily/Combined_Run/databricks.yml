@@ -8,6 +8,7 @@ run_as:
 
 targets:
   era5_pipeline:
+    mode: production
     workspace:
       # (Databricks workspace host URL is not considered sensitive information)
       host: https://dbc-ad3d47af-affb.cloud.databricks.com/

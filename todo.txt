@@ -7,6 +7,24 @@ Today:
             related to shared, tried to set up init script but those don't run
             if you're 'shared', so i  run in single mode, which is really the
             era5-principal.
+* DAB working, here's the stats:
+    * using this cluster: https://dbc-ad3d47af-affb.cloud.databricks.com/compute/clusters/0406-134207-et9icx79?o=1488538362704485
+        * note the "dedicated" access mode, otherwise i can't get at /local_drive0
+            * just in case i added an init script that makes a /local_drive0/workspace and sets the permissions
+        * setting the user to be the era5-principal, but then I dont' see how to use a workbook as my user, so I have to test as a job
+    * dealt with several permissions issues, all comes down to either the 'shared' vs 'single
+        use OR sparksessions vs sparkcontext, I think it's databricks locking down
+        against shared and low-level resources, only practical issue there is that
+        i can't set the number of partitions, that'd normally be a sparkcontext
+        hook, but instead databricks just makes as many partitions as there are
+        CPUs, bad idea if you have thousands of files to process, what if
+* Deployment in practice
+    * Use github actions to deploy the pipeline
+        * but we have two github action files
+        * the orignal code had a "dev" and "prod" part
+        * there is a dev and prod databricks asset bundle
+        * there are several workspaces? dev/prod?
+    * naming convention of "bronze/silver/gold"
 * What is the naming convention we should use?
     * I'm confused about using branches to define dev or staging or prod or whatever, what is it
         * Look at databricks.yaml, to me that is where 'dev' and 'prod' are defined? (https://github.com/richpsharp/era5-data-engineering/blob/refactor_source_to_staging_115/era5-daily/Combined_Run/databricks.yml)
@@ -15,8 +33,9 @@ Today:
                 shouldn't there be 1 and it's picked from the branch?
     * I propose using _ instead of - whenever we name catalog/schema, handles
         better in database
-    * {datasource}_{stage number}_{bronze/silver/gold}_{descriptive name}
+    * {data product era5/cmip6}_{stage number/01/02/01a/...}_{bronze/silver/gold}_{descriptive name}_{prod/development/test}_{branch name (feature)}
         * i'm not sure about that bronze/silver/gold
+
 * Runtimes:
     * initial pull, 22 minutes: https://dbc-ad3d47af-affb.cloud.databricks.com/jobs/804134530374442/runs/674897856681413?o=1488538362704485
     * daily update (3months check), 36 seconds: https://dbc-ad3d47af-affb.cloud.databricks.com/jobs/804134530374442/runs/297730054647134?o=148853836270448
@@ -25,8 +44,6 @@ Today:
     many workers i have.
 
 
-* I saw a note that I should always prefer serverless?
-* How can I get my logs from my workers? (look at logging: https://dbc-ad3d47af-affb.cloud.databricks.com/compute/clusters/0406-134207-et9icx79?o=1488538362704485)
 
 
 * Get DB pipeline working via git actions? Or pull request first?
@@ -41,3 +58,24 @@ For later:
             x scrubbing the websites so it just has relevant info in progress
             x need to run the LLM questions on the scrubbed websites
         * Fix issue of vote counting gone wrong
+
+
+* deploy a dab -- production or development dab, development/production 'tag'
+    * https://docs.databricks.com/aws/en/dev-tools/bundles/deployment-modes
+
+* development -- do the whole pipeline, but it's just a short run so we can
+    makes sure that we can run it end-to-end
+
+
+* time travel, how do i kick back when i screw up?
+
+* For Harlan (does he have access to our environment if I send him links?)
+    * partitions -- ask harlan
+    * modes -- how do i do a "testing" mode rather than just development?
+    * I saw a note that I should always prefer serverless?
+    * How can I get my logs from my workers?
+    (look at logging:
+        https://dbc-ad3d47af-affb.cloud.databricks.com/compute/clusters/0406-134207-et9icx79?o=1488538362704485)
+
+TODO:
+    * make compute as part of DAB in a json file?
