@@ -39,15 +39,6 @@ except NameError:
     dbutils = DBUtils(spark)
 
 LOGGER = logging.getLogger(__name__)
-
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-handler.setFormatter(formatter)
-LOGGER.addHandler(handler)
-
 LOGGER.setLevel(logging.DEBUG)
 
 
@@ -134,43 +125,30 @@ def process_file(
             dictionary with an "error" key describing the issue encountered.
     """
     try:
-        print(f"current file info: {file_info}")
-        sys.stdout.flush()
         source_file_path = file_info["path"]
-        print(f"Processing {source_file_path}")
-        sys.stdout.flush()
         local_file_path = os.path.join(
             local_directory, os.path.basename(source_file_path)
         )
         if os.path.exists(local_file_path):
             # This could happen during sandboxing with a leftover file
             os.remove(local_file_path)
+        LOGGER.debug(f'copy {source_file_path} to {local_file_path}')
         shutil.copyfile(source_file_path, local_file_path)
-        print(f"Copied {local_file_path}")
-        sys.stdout.flush()
 
         # Determine the file version defined as the count of previous copies+1
         version = ingested_file_count_dict[source_file_path] + 1
         name, ext = os.path.splitext(os.path.basename(source_file_path))
         file_hash = hash_file(local_file_path)
-        LOGGER.debug(f"Hash computed on {local_file_path}")
 
         if not is_netcdf_file_valid(local_file_path):
-            LOGGER.error(f"File {source_file_path} appears corrupt; skipping")
             return {
                 "error": (
                     f"File {source_file_path} to {local_file_path} appears "
                     f"corrupt; skipping"
                 )
             }
-        LOGGER.debug(f"Validation complete for {local_file_path}")
-
         # Skip if file already ingested
         if file_hash in existing_hash_dict:
-            LOGGER.info(
-                f"File with hash {file_hash} already ingested; skipping "
-                f"{source_file_path}"
-            )
             return None
 
         # file is valid, copy it to target
@@ -179,7 +157,7 @@ def process_file(
         )
         # copy it from the local because that's an NVME and the original
         # source is a goofys mounted s3 bucket
-        shutil.copyfile(local_file_path, active_file_path)
+        shutil.move(local_file_path, active_file_path)
         ingested_at = datetime.datetime.now()
         LOGGER.debug(
             f"File copied from {local_file_path} to {active_file_path}"
@@ -199,14 +177,6 @@ def process_file(
     except Exception as e:
         LOGGER.exception(f"Error processing {source_file_path}: {e}")
         raise
-    finally:
-        try:
-            os.remove(local_file_path)
-        except Exception:
-            # This shouldn't happen but it's okay if it does since local
-            # storage is ephemeral
-            LOGGER.exception(f"could not remove {local_file_path}, skipping")
-
 
 def main():
     """Entrypoint."""
@@ -283,10 +253,10 @@ def main():
         ],  # TODO: put [0] here for debugging
         key=lambda x: x["file_date"],
     )
+    
     LOGGER.info(
         f"filtered {len(files_to_process)} in {time.time()-start_time:.2f}s"
     )
-
     # it's faster to create these file hash and version count lookups in
     # one shot rather than individual calls to the database
     LOGGER.info(f"Get existing file hashes from {inventory_table_fqdn}")
@@ -330,6 +300,9 @@ def main():
         "existing_hash_dict": existing_hash_dict,
         "ingested_file_count_dict": ingested_file_count_dict,
     }
+    # TODO: this call is for debugging
+    process_file_node_batch(files_to_process, process_file_args)
+    return
     partial_process_file_node_batch = partial(
         process_file_node_batch,
         process_file_args=process_file_args,
