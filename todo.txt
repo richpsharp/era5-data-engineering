@@ -1,4 +1,11 @@
 Today:
+* Get github actions to do the databricks DAB based off the branch name
+* make compute as part of DAB in a json file?
+* move everything out of subdirectory into top directory
+* rename the repository to era5-gwsc-databricks
+
+Notes:
+
 * Got DB pipeline working manually
     * SOLUTION:
         1) I'm not able to use sparkcontext in Databricks, I have to spark sessions
@@ -76,6 +83,3 @@ For later:
     * How can I get my logs from my workers?
     (look at logging:
         https://dbc-ad3d47af-affb.cloud.databricks.com/compute/clusters/0406-134207-et9icx79?o=1488538362704485)
-
-TODO:
-    * make compute as part of DAB in a json file?

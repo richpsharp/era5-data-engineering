@@ -8,7 +8,9 @@ run_as:
 
 targets:
   era5_pipeline:
-    mode: production
+    # mode is placeholder, replaced by GitHub action see
+    # `.github/workflows/era5_combined_workflow.yaml`
+    mode: test
     workspace:
       # (Databricks workspace host URL is not considered sensitive information)
       host: https://dbc-ad3d47af-affb.cloud.databricks.com/
