@@ -19,6 +19,6 @@ targets:
           tasks:
             - task_key: era5_01_source_to_staging_task
               spark_python_task:
-                python_file: src/01_Source_to_Staging.py
+                python_file: src/era5_01_source_to_staging.py
                 parameters: ['--catalog_schema', 'era5-daily-data.bronze_dev']
               existing_cluster_id: "0406-134207-et9icx79"
