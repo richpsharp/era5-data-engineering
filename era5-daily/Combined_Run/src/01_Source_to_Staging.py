@@ -38,9 +38,16 @@ except NameError:
 
     dbutils = DBUtils(spark)
 
+
+class ImmediateFlushHandler(logging.StreamHandler):
+    def emit(self, record):
+        super().emit(record)
+        self.flush()
+
+
 logging.basicConfig(
     level=logging.DEBUG,
-    stream=sys.stdout,
+    handlers=[ImmediateFlushHandler(sys.stdout)],
     format=(
         "%(asctime)s (%(relativeCreated)d) %(levelname)s %(name)s"
         " [%(funcName)s:%(lineno)d] %(message)s"
