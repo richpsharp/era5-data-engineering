@@ -217,7 +217,7 @@ def main():
     global_start_time = time.time()
     spark = SparkSession.builder.getOrCreate()
     LOGGER.info(f"Create a schema at {schema_fqdn_path} if not exists")
-    create_schema_if_not_exists(schema_fqdn_path)
+    create_schema_if_not_exists(spark, schema_fqdn_path)
     target_volume_fqdn_path = f"{schema_fqdn_path}.{ERA5_STAGING_VOLUME_ID}"
     LOGGER.info(f"Create a volume at {target_volume_fqdn_path} if not exists")
     spark.sql(f"CREATE VOLUME IF NOT EXISTS {target_volume_fqdn_path}")

@@ -2,13 +2,6 @@
 
 import logging
 
-from databricks.sdk.runtime import spark
-from pyspark.sql import SparkSession
-
-# I found i needed to do this in the module if it wasn't the main entry point
-spark = SparkSession.getActiveSession()  # noqa: F811, keep it lc on purpose
-
-
 _DEFAULT_LOCAL_CATALOG_SCHEMA = "sandbox.sandbox"
 
 LOGGER = logging.getLogger(__name__)
