@@ -269,6 +269,7 @@ def main():
     LOGGER.info(
         f"filtered {len(files_to_process)} in {time.time()-start_time:.2f}s"
     )
+    LOGGER.debug(files_to_process)
     # it's faster to create these file hash and version count lookups in
     # one shot rather than individual calls to the database
     LOGGER.info(f"Get existing file hashes from {inventory_table_fqdn}")
