@@ -324,6 +324,7 @@ def main():
     )
 
     start = time.time()
+    os.makedirs(LOCAL_EPHEMERAL_PATH, exist_ok=True)
     # this does the "parallel" spark call because it's calling the
     # process_file_node_batch_udf against the "batch" column of
     # `file_batch_df` and puts the result in "new_inventory" column on the
