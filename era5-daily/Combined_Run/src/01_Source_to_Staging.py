@@ -172,6 +172,15 @@ def process_file(
         # copy it from the local because that's an NVME and the original
         # source is a goofys mounted s3 bucket
         shutil.move(local_file_path, active_file_path)
+
+        mod_time = file_info["file_modification_time"]
+        if isinstance(mod_time, str):
+            mod_time = datetime.datetime.fromisoformat(mod_time)
+
+        data_date = file_info["file_date"]
+        if isinstance(data_date, str):
+            data_date = datetime.datetime.fromisoformat(data_date)
+
         ingested_at = datetime.datetime.now()
 
         # Create a inventory entry for this file
@@ -180,10 +189,10 @@ def process_file(
             source_file_path=source_file_path,
             file_hash=file_hash,
             active_file_path=active_file_path,
-            source_modified_at=file_info["file_modification_time"],
-            data_date=file_info["file_date"],
+            source_modified_at=mod_time,
+            data_date=data_date,
         )
-
+        LOGGER.debug(f"new entry: {new_entry}")
         return new_entry
     except Exception as e:
         LOGGER.exception(f"Error processing {source_file_path}: {e}")
@@ -301,7 +310,6 @@ def main():
     file_batch_df = spark.createDataFrame(
         [(b,) for b in batches_to_process], ["batch"]
     )
-    file_batch_df.show()
 
     start = time.time()
     # this does the "parallel" spark call because it's calling the
@@ -325,13 +333,13 @@ def main():
     nested_new_inventory_dfs = file_batch_df.withColumn(
         "new_inventory", process_file_node_batch_udf(col("batch"))
     )
-    nested_new_inventory_dfs.show()
+    # nested_new_inventory_dfs.show()
     # explode out the arrays and then "select" the entires so they expand into
     # columns which match the schema for the table at `inventory_table_fqdn`
     inventory_entries_df = nested_new_inventory_dfs.select(
         explode(col("new_inventory")).alias("inventory_entry")
     ).select("inventory_entry.*")
-    inventory_entries_df.show()
+    # inventory_entries_df.show()
 
     inventory_entries_df.write.format("delta").mode("append").saveAsTable(
         inventory_table_fqdn
