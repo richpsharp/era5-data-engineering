@@ -1,11 +1,5 @@
 Today:
-* Get DB pipeline working manually
-    * I am not able to get the injection into the table right, seems like a permission things
-    * I think there's an issue with determining which catalog to reference,
-        I think that should be a "job parameter" when running the job and
-        if it doesn't exist default to sandbox. I otherwise have an error about
-        whitlisting some permissions, i think for a table, but i don't know
-        what table it is making.
+* Got DB pipeline working manually
     * SOLUTION:
         1) I'm not able to use sparkcontext in Databricks, I have to spark sessions
         2) Need to use 'single user' nodes, otherwise so much sharing
@@ -15,10 +9,24 @@ Today:
             era5-principal.
 * What is the naming convention we should use?
     * I'm confused about using branches to define dev or staging or prod or whatever, what is it
-        * Look at databricks.yaml, to me that is where 'dev' and 'prod' are defined?
+        * Look at databricks.yaml, to me that is where 'dev' and 'prod' are defined? (https://github.com/richpsharp/era5-data-engineering/blob/refactor_source_to_staging_115/era5-daily/Combined_Run/databricks.yml)
             * Or else we pull dev/prod from the branch name? just seems like it's duplciated around
+            * but then we also have two git workflows: https://github.com/richpsharp/era5-data-engineering/tree/refactor_source_to_staging_115/.github/workflows
+                shouldn't there be 1 and it's picked from the branch?
     * I propose using _ instead of - whenever we name catalog/schema, handles
         better in database
+    * {datasource}_{stage number}_{bronze/silver/gold}_{descriptive name}
+        * i'm not sure about that bronze/silver/gold
+* Runtimes:
+    * initial pull, 22 minutes: https://dbc-ad3d47af-affb.cloud.databricks.com/jobs/804134530374442/runs/674897856681413?o=1488538362704485
+    * daily update (3months check), 36 seconds: https://dbc-ad3d47af-affb.cloud.databricks.com/jobs/804134530374442/runs/297730054647134?o=148853836270448
+* Parallelism -- using unity catalog and SparkSessions, not SparkContext, I am reliant on
+    databricks doing all my scheduling. It breaks the jobs up into just however
+    many workers i have.
+
+
+* I saw a note that I should always prefer serverless?
+* How can I get my logs from my workers? (look at logging: https://dbc-ad3d47af-affb.cloud.databricks.com/compute/clusters/0406-134207-et9icx79?o=1488538362704485)
 
 
 * Get DB pipeline working via git actions? Or pull request first?
