@@ -284,9 +284,7 @@ def main():
                 ).date()
             )
             and start_date <= file_date <= end_date  # noqa: W503
-        ][
-            :16
-        ],  # TODO: put :16 here to do 16 files at a time for debugging
+        ],
         key=lambda x: x["file_date"],
     )
 
