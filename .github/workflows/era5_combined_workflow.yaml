@@ -19,6 +19,10 @@ jobs:
       - name: Set up the Databricks CLI
         uses: databricks/setup-cli@main
 
+      - name: Execution Environment
+        run: |
+          sudo apt-get update && sudo apt-get install -y yq
+
       - name: Set Deployment Mode
         id: set_mode
         run: |
@@ -31,10 +35,10 @@ jobs:
           echo "Mode: $MODE"
 
       - name: Update databricks.yml file
+        working-directory: ./era5-daily/Combined_Run
         run: |
-          sed -i "s/mode: .*/mode: $MODE/" databricks.yml
+          yq e ".targets.era5_pipeline.mode = \"${MODE}\"" -i databricks.yml
           cat databricks.yml
-
       # - name: Deploy to Databricks
       #   run: |
       #     databricks deploy --config databricks.yml

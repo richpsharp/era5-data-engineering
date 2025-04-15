@@ -63,6 +63,8 @@ Naming files, pipelines, dataproducts, and similar is based roughly on this temp
 
 Branch naming convention: `production`, `development`, `feature/`, `bugfix/`,
 
+Prefer `_` instead of `-` in all cases where possible, SQL does not behave welll with - and must be backticked, best to keep consistent.
+
 ## Contact
 - Sambadi Majumder (smajumder1@ua.edu)
 - Hobson Bryan (cbryan26@ua.edu)
