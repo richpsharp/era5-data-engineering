@@ -6,6 +6,16 @@ Today:
         if it doesn't exist default to sandbox. I otherwise have an error about
         whitlisting some permissions, i think for a table, but i don't know
         what table it is making.
+    * SOLUTION:
+        1) I'm not able to use sparkcontext in Databricks, I have to spark sessions
+        2) Need to use 'single user' nodes, otherwise so much sharing
+            permissions, I had a problem with local_drive0 not being accessable
+            related to shared, tried to set up init script but those don't run
+            if you're 'shared', so i  run in single mode, which is really the
+            era5-principal.
+* What is the naming convention we should use?
+    * I'm confused about using branches to define dev or staging or prod or whatever, what is it
+
 * Get DB pipeline working via git actions? Or pull request first?
 
 For later:
