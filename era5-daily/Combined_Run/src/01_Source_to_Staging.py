@@ -52,7 +52,7 @@ logging.getLogger("py4j").setLevel(logging.INFO)
 
 # data starts here and we'll use it to set a threshold for when the data should
 # be pulled
-ERA5_START_DATE = datetime.datetime(2024, 4, 4).date()
+ERA5_START_DATE = datetime.datetime(1950, 1, 1).date()
 DELTA_MONTHS = 3  # always search at least 3 months prior
 
 
