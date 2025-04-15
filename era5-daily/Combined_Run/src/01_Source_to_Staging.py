@@ -131,8 +131,9 @@ def process_file(
         )
         if os.path.exists(local_file_path):
             # This could happen during sandboxing with a leftover file
-            dbutils.fs.rm(local_file_path)
-        dbutils.fs.cp(source_file_path, local_file_path)
+            os.remove(local_file_path)
+        LOGGER.debug(f'copy {source_file_path} to {local_file_path}')
+        shutil.copyfile(source_file_path, local_file_path)
 
         # Determine the file version defined as the count of previous copies+1
         version = ingested_file_count_dict[source_file_path] + 1
@@ -156,7 +157,7 @@ def process_file(
         )
         # copy it from the local because that's an NVME and the original
         # source is a goofys mounted s3 bucket
-        dbutils.fs.mv(local_file_path, active_file_path)
+        shutil.move(local_file_path, active_file_path)
         ingested_at = datetime.datetime.now()
         LOGGER.debug(
             f"File copied from {local_file_path} to {active_file_path}"
@@ -252,10 +253,10 @@ def main():
         ],  # TODO: put [0] here for debugging
         key=lambda x: x["file_date"],
     )
+    
     LOGGER.info(
         f"filtered {len(files_to_process)} in {time.time()-start_time:.2f}s"
     )
-
     # it's faster to create these file hash and version count lookups in
     # one shot rather than individual calls to the database
     LOGGER.info(f"Get existing file hashes from {inventory_table_fqdn}")
@@ -299,6 +300,9 @@ def main():
         "existing_hash_dict": existing_hash_dict,
         "ingested_file_count_dict": ingested_file_count_dict,
     }
+    # TODO: this call is for debugging
+    process_file_node_batch(files_to_process, process_file_args)
+    return
     partial_process_file_node_batch = partial(
         process_file_node_batch,
         process_file_args=process_file_args,
