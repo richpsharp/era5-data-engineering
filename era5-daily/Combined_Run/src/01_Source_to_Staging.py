@@ -301,6 +301,7 @@ def main():
     file_batch_df = spark.createDataFrame(
         [(b,) for b in batches_to_process], ["batch"]
     )
+    file_batch_df.show()
 
     start = time.time()
     # this does the "parallel" spark call because it's calling the
