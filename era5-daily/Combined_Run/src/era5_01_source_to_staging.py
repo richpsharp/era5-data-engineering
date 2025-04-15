@@ -25,8 +25,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, col, explode
 from pyspark.sql.types import ArrayType
 
-from utils.catalog_support import create_schema_if_not_exists
-from utils.catalog_support import get_catalog_schema_fqdn
 from utils.file_utils import hash_file
 from utils.file_utils import is_netcdf_file_valid
 from utils.table_definition_loader import create_table
