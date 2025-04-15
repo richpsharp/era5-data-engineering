@@ -11,7 +11,6 @@ targets:
     workspace:
       # (Databricks workspace host URL is not considered sensitive information)
       host: https://dbc-ad3d47af-affb.cloud.databricks.com/
-
     resources:
       jobs:
         era5_01_source_to_staging_job:
