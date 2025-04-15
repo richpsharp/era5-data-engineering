@@ -1,41 +1,24 @@
-# This is a Databricks asset bundle definition for combined_run.
-# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
 bundle:
   name: combined_run
 
 run_as:
-  # Service Principal name is not considered sensitive information
+  # (service principal name is not considered sensitive information)
   # era5-service-principal
   service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
 
 targets:
-  pilot:
-    mode: development
+  era5_pipeline:
     workspace:
-      # Databricks workspace host URL is not considered sensitive information
+      # (Databricks workspace host URL is not considered sensitive information)
       host: https://dbc-ad3d47af-affb.cloud.databricks.com/
 
     resources:
       jobs:
-        era5_01_source_to_staging:
-          name: "ERA5_01_Source_to_Staging"
+        era5_01_source_to_staging_job:
+          name: "era5_01_source_to_staging_job"
           tasks:
-            - task_key: run_era5_01_source_to_staging
+            - task_key: era5_01_source_to_staging_task
               spark_python_task:
                 python_file: src/01_Source_to_Staging.py
-              existing_cluster_id: "0406-134207-et9icx79"
-  parallel_test:
-    mode: development
-    workspace:
-      # Databricks workspace host URL is not considered sensitive information
-      host: https://dbc-ad3d47af-affb.cloud.databricks.com/
-
-    resources:
-      jobs:
-        parallel_test:
-          name: "parallel_test"
-          tasks:
-            - task_key: parallel_test
-              spark_python_task:
-                python_file: src/parallel_test.py
+                parameters: ['--catalog_schema', 'era5-daily-data.bronze_dev']
               existing_cluster_id: "0406-134207-et9icx79"

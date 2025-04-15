@@ -1,36 +1,38 @@
 """ERA5 source to staging pipeline."""
 
-import sys
-from functools import partial
-import shutil
-import datetime
+from concurrent.futures import ThreadPoolExecutor
 from dateutil.relativedelta import relativedelta
+from functools import partial
+import argparse
+import collections
+import datetime
 import logging
 import os
 import re
+import shutil
+import sys
 import time
-import collections
-from concurrent.futures import ThreadPoolExecutor
 
-from config import LOCAL_EPHEMERAL_PATH
 from config import ERA5_INVENTORY_TABLE_DEFINITION_PATH
 from config import ERA5_INVENTORY_TABLE_NAME
 from config import ERA5_SOURCE_VOLUME_PATH
 from config import ERA5_STAGING_VOLUME_ID
+from config import LOCAL_EPHEMERAL_PATH
 from databricks.sdk.runtime import spark
 from pyspark.sql import Row
-
-from utils.catalog_support import get_catalog_schema_fqdn
-from utils.catalog_support import create_schema_if_not_exists
-from utils.file_utils import hash_file
-from utils.file_utils import is_netcdf_file_valid
-from utils.table_definition_loader import create_table
-from utils.table_definition_loader import load_table_struct
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, col, explode
 from pyspark.sql.types import ArrayType
 
+from utils.catalog_support import create_schema_if_not_exists
+from utils.catalog_support import get_catalog_schema_fqdn
+from utils.file_utils import hash_file
+from utils.file_utils import is_netcdf_file_valid
+from utils.table_definition_loader import create_table
+from utils.table_definition_loader import load_table_struct
 
+# I encountered some cases when dbutils was not defined, so this makes sure
+# that it is
 try:
     dbutils  # Check if dbutils is defined
 except NameError:
@@ -40,7 +42,10 @@ except NameError:
 
 
 class ImmediateFlushHandler(logging.StreamHandler):
+    """Used to flush log immediately to stdout."""
+
     def emit(self, record):
+        """Emit and flush."""
         super().emit(record)
         self.flush()
 
@@ -201,9 +206,15 @@ def process_file(
 
 def main():
     """Entrypoint."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--catalog_schema", type=str, help="catalog.schema to use for the job"
+    )
+    args = parser.parse_args()
+    schema_fqdn_path = get_catalog_schema_fqdn(args.catalog_schema)
+
     global_start_time = time.time()
     spark = SparkSession.builder.getOrCreate()
-    schema_fqdn_path = get_catalog_schema_fqdn()
     LOGGER.info(f"Create a schema at {schema_fqdn_path} if not exists")
     create_schema_if_not_exists(schema_fqdn_path)
     target_volume_fqdn_path = f"{schema_fqdn_path}.{ERA5_STAGING_VOLUME_ID}"
