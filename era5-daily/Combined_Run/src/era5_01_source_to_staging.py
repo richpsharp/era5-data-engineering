@@ -18,6 +18,7 @@ from config import ERA5_INVENTORY_TABLE_NAME
 from config import ERA5_SOURCE_VOLUME_PATH
 from config import ERA5_STAGING_VOLUME_ID
 from config import LOCAL_EPHEMERAL_PATH
+from config import DEFAULT_LOCAL_CATALOG_FQDN
 from databricks.sdk.runtime import spark
 from pyspark.sql import Row
 from pyspark.sql import SparkSession
@@ -207,19 +208,20 @@ def process_file(
 
 def main():
     """Entrypoint."""
+    global_start_time = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--catalog_schema", type=str, help="catalog.schema to use for the job"
+        "--catalog_schema",
+        type=str,
+        help="catalog.schema to use for the job",
+        default=DEFAULT_LOCAL_CATALOG_FQDN,
     )
     args = parser.parse_args()
     LOGGER.info(f"creating {args.catalog_schema}")
-    schema_fqdn_path = get_catalog_schema_fqdn(args.catalog_schema)
-
-    global_start_time = time.time()
     spark = SparkSession.builder.getOrCreate()
-    LOGGER.info(f"Create a schema at {schema_fqdn_path} if not exists")
-    create_schema_if_not_exists(spark, schema_fqdn_path)
-    target_volume_fqdn_path = f"{schema_fqdn_path}.{ERA5_STAGING_VOLUME_ID}"
+    LOGGER.info(f"Create a schema at {args.catalog_schema} if not exists")
+    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {args.catalog_schema}")
+    target_volume_fqdn_path = f"{args.catalog_schema}.{ERA5_STAGING_VOLUME_ID}"
     LOGGER.info(f"Create a volume at {target_volume_fqdn_path} if not exists")
     spark.sql(f"CREATE VOLUME IF NOT EXISTS {target_volume_fqdn_path}")
 
@@ -232,7 +234,7 @@ def main():
     inventory_table_sql_schema = load_table_struct(
         ERA5_INVENTORY_TABLE_DEFINITION_PATH, ERA5_INVENTORY_TABLE_NAME
     )
-    inventory_table_fqdn = f"{schema_fqdn_path}.{ERA5_INVENTORY_TABLE_NAME}"
+    inventory_table_fqdn = f"{args.catalog_schema}.{ERA5_INVENTORY_TABLE_NAME}"
     LOGGER.info(f"Creating inventory table at {inventory_table_fqdn}")
     create_table(inventory_table_fqdn, inventory_table_sql_schema)
 
