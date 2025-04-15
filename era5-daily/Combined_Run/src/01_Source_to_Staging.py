@@ -252,13 +252,14 @@ def main():
     files_to_process = sorted(
         [
             {
-                "file_date": file_date,
+                # convert to isoformat for spark serialization which converts to a string
+                "file_date": file_date.isoformat(),
                 # dbfs ls gives us prefixed with dbfs// so we strip it here
                 "path": file_info.path.strip("dbfs:"),
                 # dbutils.fs does time in ms, so convert to seconds w/ / 1000
                 "file_modification_time": datetime.datetime.fromtimestamp(
                     file_info.modificationTime / 1000
-                ),
+                ).isoformat(),
             }
             # prefix with dbfs: because it's faster
             for file_info in dbutils.fs.ls(f"dbfs:{source_directory}")
