@@ -18,10 +18,10 @@ jobs:
 
       - name: Install yq
         uses: actions/cache@v4
-          with:
-            path: ~/.cache/pip
-            key: pip install yq
-          run: pip install yq
+        with:
+          path: ~/.cache/pip
+          key: pip install yq
+        run: pip install yq
 
       - name: Update databricks.yml file
         working-directory: ./era5-daily/Combined_Run
