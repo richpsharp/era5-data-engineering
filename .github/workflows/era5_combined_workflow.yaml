@@ -5,13 +5,14 @@ on:
     branches:
       # production is critical, we always want to run the action on it
       - production
+      # these are just useful for development
+      - 'feature/**'
+      - 'bugfix/**'
+      - 'hotfix/**'
   pull_request:
     branches:
       - production
       - development
-      - 'feature/**'
-      - 'bugfix/**'
-      - 'hotfix/**'
 
   workflow_dispatch:
     inputs:
@@ -80,7 +81,7 @@ jobs:
         run: |
           databricks bundle deploy --target $MODE
 
-      - name: Run the era5_01_source_to_staging_job once
+      - name: Run the era5_01_bronze_source_to_staging_job once
         working-directory: ./era5-daily/Combined_Run
         run: |
-          databricks bundle run era5_01_source_to_staging_job --target $MODE
+          databricks bundle run era5_01_bronze_source_to_staging_job --target $MODE

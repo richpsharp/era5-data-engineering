@@ -31,6 +31,8 @@ talk:
         * code must conform to PEP8 style with exceptions allowed
         * docstrings must be google style
     * bronze/silver/gold naming conventions
+        * volume: era5_staging_folder_bronze
+        * table: era5_staging_inventory_bronze
         * just look at "era5_01_source_to_staging_run"  is it
             "era5_01_bronze_source_to_staging_run"?
     * {data product era5/cmip6}_{stage number/01/02/01a/...}_{bronze/silver/gold}_{descriptive name}_{prod/development/test}_{branch name (feature)}

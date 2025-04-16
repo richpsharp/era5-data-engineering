@@ -17,9 +17,9 @@ resources:
       tags:
         BRANCH: will_be_set_by_github_action
       tasks:
-        - task_key: era5_01_source_to_staging_task
+        - task_key: era5_01_bronze_source_to_staging_task
           spark_python_task:
-            python_file: src/era5_01_source_to_staging.py
+            python_file: src/era5_01_bronze_source_to_staging.py
             parameters:
               - --catalog_schema
               - era5_daily_data.bronze_dev
