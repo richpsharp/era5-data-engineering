@@ -16,9 +16,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Execution Environment
-        run: |
-          sudo apt-get update && sudo apt-get install -y yq
+      - name: Install yq
+        uses: actions/cache@v4
+          with:
+            path: ~/.cache/pip
+            key: pip install yq
+          run: pip install yq
 
       - name: Update databricks.yml file
         working-directory: ./era5-daily/Combined_Run
@@ -29,6 +32,7 @@ jobs:
 
       # Step 3: Deploy the Databricks Bundle
       - name: Deploy Databricks Bundle
+        uses: databricks/setup-cli@main
         working-directory: ./era5-daily/Combined_Run
         run: |
           databricks bundle deploy --target era5_pipeline
