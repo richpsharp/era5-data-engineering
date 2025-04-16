@@ -1,0 +1,87 @@
+name: "Deploy and Run Combined ERA5 Workflow"
+
+on:
+  push:
+    branches:
+      # production is critical, we always want to run the action on it
+      - production
+      # these are just useful for development
+      - 'feature/**'
+      - 'bugfix/**'
+      - 'hotfix/**'
+  pull_request:
+    branches:
+      - production
+      - development
+
+  workflow_dispatch:
+    inputs:
+      dab_target:
+        description: 'DAB target to deploy (overrides branch-based selection)'
+        required: false
+        default: ''
+        type: choice
+        options:
+          - ''
+          - 'production'
+          - 'development'
+          - 'test'
+
+jobs:
+  deploy_and_run_combined_job:
+    name: "deploy and run combined era5 jobs"
+    runs-on: ubuntu-latest
+    env:
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+
+      - name: setup databricks cli
+        uses: databricks/setup-cli@main
+
+      - name: determine DAB mode
+        run: |
+          # check if there's a manual override
+          if [[ -n "${{ github.event.inputs.dab_target }}" ]]; then
+            echo "MODE=${{ github.event.inputs.dab_target }}" >> $GITHUB_ENV
+          else
+            # else, set mode based on branch name
+            if [[ "$GITHUB_REF_NAME" == "production" ]]; then
+              echo "MODE=production" >> $GITHUB_ENV
+            else
+              echo "MODE=development" >> $GITHUB_ENV
+            fi
+          fi
+
+      - name: Install yq for YAML dynamic injection
+        run: |
+          sudo curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -o /usr/local/bin/yq && sudo chmod +x /usr/local/bin/yq
+
+      - name: Determine branch name for DAB tag
+        id: branch
+        run: echo "BRANCH=${GITHUB_REF_NAME#refs/heads/}" >> $GITHUB_OUTPUT
+
+      - name: Inject branch name into DAB
+        working-directory: ./era5-daily/Combined_Run
+        run: |
+          /usr/local/bin/yq eval -i '.resources.jobs.era5_01_bronze_source_to_staging_job.tags.BRANCH = env(BRANCH)' databricks.yml
+          cat databricks.yml
+        env:
+          BRANCH: ${{ steps.branch.outputs.BRANCH }}
+
+      - name: Validate DAB
+        working-directory: ./era5-daily/Combined_Run
+        run: |
+          databricks bundle validate --target $MODE
+
+      - name: Deploy DAB
+        working-directory: ./era5-daily/Combined_Run
+        run: |
+          databricks bundle deploy --target $MODE
+
+      - name: Run the era5_01_bronze_source_to_staging_job once
+        working-directory: ./era5-daily/Combined_Run
+        run: |
+          databricks bundle run era5_01_bronze_source_to_staging_job --target $MODE

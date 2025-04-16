@@ -1,0 +1,129 @@
+Today:
+x Get github actions to do the databricks DAB based off the branch name
+* make compute as part of DAB in a json file?
+x name the *JOB* like this: Naming files, pipelines, dataproducts, and similar is based roughly on this template: ```{data product era5/cmip6}_{stage number/01/02/01a/...}_{bronze/silver/gold}_{descriptive name}_{production/development/test}_{branch name (feature)}```.
+x figure out branch protection on git
+x do pass on naming conventions
+* test cases
+* Merge the workflow action into the default branch with hotfix
+    so I can use a manual action
+
+talk:
+    * github action
+        * if development "tag" (anything that's not the production branch),
+            * runs test cases
+            * pushes a DAB
+            * runs the dab on a small set,
+            * leaves it there so you can check it online
+        * if production (only PRs to production),
+            * runs test cases
+            * pushes dab runs full set
+            * if successful starts daily cron job
+    * branch conventions
+        * I would like dev and production to only be able to be altered through
+            pull requests that must have at least one approval, no direct pushes
+        * branch name proposals:
+            * production (currently `prod`) (can only pull from development or hotfix/{issue number})
+            * development (features/bugfixes pull into here)
+            * Working branches from forks hopefully
+                * feature/{issue number}_{short description}
+                * bugfix/{issue number}_{short description}
+                * hotfix/{issue_number}_{short description}
+            * then not sure about dev-main, dev-main-hobson, staging
+    * PR convention
+        * must pass all test cases
+        * code must conform to PEP8 style with exceptions allowed
+        * docstrings must be google style
+    * bronze/silver/gold naming conventions
+        * volume: era5_staging_folder_bronze
+        * table: era5_staging_inventory_bronze
+        * script: era5_01_bronze_source_to_staging.py
+    * {data product era5/cmip6}_{stage number/01/02/01a/...}_{bronze/silver/gold}
+        _{descriptive name}_{branch name (feature)}
+    * existing readmes are bloated, can I put off for future?
+    * todo:
+        * test suite as part of the action
+        * change the `production` branch name and make a `development`
+            * close the other branches?
+        * make the compute part of the DAB
+
+
+Notes:
+
+* Got DB pipeline working manually
+    * SOLUTION:
+        1) I'm not able to use sparkcontext in Databricks, I have to spark sessions
+        2) Need to use 'single user' nodes, otherwise so much sharing
+            permissions, I had a problem with local_drive0 not being accessable
+            related to shared, tried to set up init script but those don't run
+            if you're 'shared', so i  run in single mode, which is really the
+            era5-principal.
+* DAB working, here's the stats:
+    * using this cluster: https://dbc-ad3d47af-affb.cloud.databricks.com/compute/clusters/0406-134207-et9icx79?o=1488538362704485
+        * note the "dedicated" access mode, otherwise i can't get at /local_drive0
+            * just in case i added an init script that makes a /local_drive0/workspace and sets the permissions
+        * setting the user to be the era5-principal, but then I dont' see how to use a workbook as my user, so I have to test as a job
+    * dealt with several permissions issues, all comes down to either the 'shared' vs 'single
+        use OR sparksessions vs sparkcontext, I think it's databricks locking down
+        against shared and low-level resources, only practical issue there is that
+        i can't set the number of partitions, that'd normally be a sparkcontext
+        hook, but instead databricks just makes as many partitions as there are
+        CPUs, bad idea if you have thousands of files to process, what if
+* Deployment in practice
+    * Use github actions to deploy the pipeline
+        * but we have two github action files
+        * the orignal code had a "dev" and "prod" part
+        * there is a dev and prod databricks asset bundle
+        * there are several workspaces? dev/prod?
+    * naming convention of "bronze/silver/gold"
+* What is the naming convention we should use?
+    * I'm confused about using branches to define dev or staging or prod or whatever, what is it
+        * Look at databricks.yaml, to me that is where 'dev' and 'prod' are defined? (https://github.com/richpsharp/era5-data-engineering/blob/refactor_source_to_staging_115/era5-daily/Combined_Run/databricks.yml)
+            * Or else we pull dev/prod from the branch name? just seems like it's duplciated around
+            * but then we also have two git workflows: https://github.com/richpsharp/era5-data-engineering/tree/refactor_source_to_staging_115/.github/workflows
+                shouldn't there be 1 and it's picked from the branch?
+    * I propose using _ instead of - whenever we name catalog/schema, handles
+        better in database
+    * {data product era5/cmip6}_{stage number/01/02/01a/...}_{bronze/silver/gold}_{descriptive name}_{prod/development/test}_{branch name (feature)}
+        * i'm not sure about that bronze/silver/gold
+
+* Runtimes:
+    * initial pull, 22 minutes: https://dbc-ad3d47af-affb.cloud.databricks.com/jobs/804134530374442/runs/674897856681413?o=1488538362704485
+    * daily update (3months check), 36 seconds: https://dbc-ad3d47af-affb.cloud.databricks.com/jobs/804134530374442/runs/297730054647134?o=148853836270448
+* Parallelism -- using unity catalog and SparkSessions, not SparkContext, I am reliant on
+    databricks doing all my scheduling. It breaks the jobs up into just however
+    many workers i have.
+
+
+
+
+* Get DB pipeline working via git actions? Or pull request first?
+
+For later:
+* Work on the pest trait pipeline
+    * Chnage to stages so we have
+        x pull searches
+        x pull websites
+        x process websites -- in progress
+        x NLP part
+            x scrubbing the websites so it just has relevant info in progress
+            x need to run the LLM questions on the scrubbed websites
+        * Fix issue of vote counting gone wrong
+
+
+* deploy a dab -- production or development dab, development/production 'tag'
+    * https://docs.databricks.com/aws/en/dev-tools/bundles/deployment-modes
+
+* development -- do the whole pipeline, but it's just a short run so we can
+    makes sure that we can run it end-to-end
+
+
+* time travel, how do i kick back when i screw up?
+
+* For Harlan (does he have access to our environment if I send him links?)
+    * partitions -- ask harlan
+    * modes -- how do i do a "testing" mode rather than just development?
+    * I saw a note that I should always prefer serverless?
+    * How can I get my logs from my workers?
+    (look at logging:
+        https://dbc-ad3d47af-affb.cloud.databricks.com/compute/clusters/0406-134207-et9icx79?o=1488538362704485)

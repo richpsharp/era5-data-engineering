@@ -1,46 +1,48 @@
-# This is a Databricks asset bundle definition for combined_run.
-# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
 bundle:
-  name: combined_run
-
-include:
-  - resources/*.yml
+  name: era5_01_bronze_source_to_staging_run
 
 run_as:
-  service_principal_name: "19ea432a-82df-43ec-b76a-badd530f8d60"
+  service_principal_name: 0dbc3b87-0681-43d4-b52e-53bce65fcae5
+
+resources:
+  jobs:
+    era5_01_bronze_source_to_staging_job:
+      name: era5_01_bronze_source_to_staging_job
+      schedule:
+        # format is SEC MIN HOUR DOM MON DOW, DOW
+        # DOW is "?" because DOM is already "all days" with a "*" so "?"
+        # means we don't care, not that we try to match them all
+        quartz_cron_expression: '0 0 0 * * ?'
+        timezone_id: 'UTC'
+      tags:
+        BRANCH: will_be_set_by_github_action
+      tasks:
+        - task_key: era5_01_bronze_source_to_staging_task
+          spark_python_task:
+            python_file: src/era5_01_bronze_source_to_staging.py
+            parameters:
+              - --catalog_schema
+              - era5_daily_data.bronze_dev
+          existing_cluster_id: 0406-134207-et9icx79
+
+# Same workspace for development and production
+workspace_host: &workspace_host https://dbc-ad3d47af-affb.cloud.databricks.com/
 
 targets:
-  # The 'dev' target, for development purposes. This target is the default.
-  dev:
-    # We use 'mode: development' to indicate this is a personal development copy:
-    # - Deployed resources get prefixed with '[dev my_user_name]'
-    # - Any job schedules and triggers are paused by default
-    # - The 'development' mode is used for Delta Live Tables pipelines
+  production:
+    mode: production
+    workspace:
+      host: *workspace_host
+  development:
+    # only difference for development is to not set a cron job
     mode: development
-    default: true
     workspace:
-      host: https://dbc-ad3d47af-affb.cloud.databricks.com
-
-  # Optionally, there could be a 'staging' target here.
-  # (See Databricks docs on CI/CD at https://docs.databricks.com/dev-tools/bundles/ci-cd.html.)
-  #
-  # staging:
-  #   workspace:
-  #     host: https://dbc-ad3d47af-affb.cloud.databricks.com
-
-  # The 'staging' target, used for staging deployment.
-  staging:
-    mode: production
+      host: *workspace_host
+    resources:
+      jobs:
+        era5_01_bronze_source_to_staging_job:
+          schedule: null
+  test:
+    mode: development
     workspace:
-      host: https://dbc-59ffb06d-e490.cloud.databricks.com
-
-  # The 'prod' target, used for production deployment.
-  prod:
-    # We use 'mode: production' to indicate this is a production deployment.
-    # Doing so enables strict verification of the settings below.
-    mode: production
-    workspace:
-      host: https://dbc-59ffb06d-e490.cloud.databricks.com
-      # We always use /Users/smajumder1@ua.edu for all resources to make sure we only have a single copy.
-      # If this path results in an error, please make sure you have a recent version of the CLI installed.
-      root_path: /Users/smajumder1@ua.edu/.bundle/${bundle.name}/${bundle.target}
+      host: *workspace_host
