@@ -37,7 +37,7 @@ jobs:
       - name: Update databricks.yml file
         working-directory: ./era5-daily/Combined_Run
         run: |
-          yq ".targets.era5_pipeline.mode = \"${MODE}\"" -i databricks.yml
+          yq ".targets.era5_pipeline.mode = \"${MODE}\"" -y -i databricks.yml
       # - name: Deploy to Databricks
       #   run: |
       #     databricks deploy --config databricks.yml
