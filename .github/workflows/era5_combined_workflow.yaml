@@ -16,8 +16,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up the Databricks CLI
-
       - name: Execution Environment
         run: |
           sudo apt-get update && sudo apt-get install -y yq
