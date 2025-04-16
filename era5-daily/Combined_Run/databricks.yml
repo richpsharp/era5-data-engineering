@@ -1,21 +1,40 @@
 bundle:
   name: combined_run
+
 run_as:
   service_principal_name: 0dbc3b87-0681-43d4-b52e-53bce65fcae5
+
+resources:
+  jobs:
+    era5_01_source_to_staging_job:
+      name: era5_01_source_to_staging_job
+      schedule:
+        # Daily at midnight UTC
+        quartz_cron_expression: '0 0 0 * * ?'
+        timezone_id: 'UTC'
+      tasks:
+        - task_key: era5_01_source_to_staging_task
+          spark_python_task:
+            python_file: src/era5_01_source_to_staging.py
+            parameters:
+              - --catalog_schema
+              - era5_daily_data.bronze_dev
+          existing_cluster_id: 0406-134207-et9icx79
+
+# Same workspace for development and production
+workspace_host: &workspace_host https://dbc-ad3d47af-affb.cloud.databricks.com/
+
 targets:
-  era5_pipeline:
+  production:
+    mode: production
+    workspace:
+      host: *workspace_host
+  development:
     mode: development
     workspace:
-      host: https://dbc-ad3d47af-affb.cloud.databricks.com/
+      host: *workspace_host
+    # only difference for development is to not set a cron job
     resources:
       jobs:
         era5_01_source_to_staging_job:
-          name: era5_01_source_to_staging_job
-          tasks:
-            - task_key: era5_01_source_to_staging_task
-              spark_python_task:
-                python_file: src/era5_01_source_to_staging.py
-                parameters:
-                  - --catalog_schema
-                  - era5_daily_data.bronze_dev
-              existing_cluster_id: 0406-134207-et9icx79
+          schedule: null
