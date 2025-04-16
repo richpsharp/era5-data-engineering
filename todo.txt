@@ -1,8 +1,11 @@
-todo:
+Today:
+x Get github actions to do the databricks DAB based off the branch name
+* make compute as part of DAB in a json file?
+x name the *JOB* like this: Naming files, pipelines, dataproducts, and similar is based roughly on this template: ```{data product era5/cmip6}_{stage number/01/02/01a/...}_{bronze/silver/gold}_{descriptive name}_{production/development/test}_{branch name (feature)}```.
 x figure out branch protection on git
-* do pass on naming conventions
+x do pass on naming conventions
 * test cases
-* I think I want to merge the workflow action into the default branch
+* Merge the workflow action into the default branch with hotfix
     so I can use a manual action
 
 talk:
@@ -25,6 +28,7 @@ talk:
             * Working branches from forks hopefully
                 * feature/{issue number}_{short description}
                 * bugfix/{issue number}_{short description}
+                * hotfix/{issue_number}_{short description}
             * then not sure about dev-main, dev-main-hobson, staging
     * PR convention
         * must pass all test cases
@@ -33,20 +37,15 @@ talk:
     * bronze/silver/gold naming conventions
         * volume: era5_staging_folder_bronze
         * table: era5_staging_inventory_bronze
-        * just look at "era5_01_source_to_staging_run"  is it
-            "era5_01_bronze_source_to_staging_run"?
-    * {data product era5/cmip6}_{stage number/01/02/01a/...}_{bronze/silver/gold}_{descriptive name}_{prod/development/test}_{branch name (feature)}
+        * script: era5_01_bronze_source_to_staging.py
+    * {data product era5/cmip6}_{stage number/01/02/01a/...}_{bronze/silver/gold}
+        _{descriptive name}_{branch name (feature)}
     * existing readmes are bloated, can I put off for future?
-
-
-Today:
-x Get github actions to do the databricks DAB based off the branch name
-* make compute as part of DAB in a json file?
-* move everything out of subdirectory into top directory
-* rename the repository to era5-gwsc-databricks
-* would like to move era5
-* name the *JOB* like this: Naming files, pipelines, dataproducts, and similar is based roughly on this template: ```{data product era5/cmip6}_{stage number/01/02/01a/...}_{bronze/silver/gold}_{descriptive name}_{production/development/test}_{branch name (feature)}```.
-* add tests
+    * todo:
+        * test suite as part of the action
+        * change the `production` branch name and make a `development`
+            * close the other branches?
+        * make the compute part of the DAB
 
 
 Notes:
