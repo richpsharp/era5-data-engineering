@@ -3,6 +3,10 @@ name: "Deploy and Run Combined ERA5 Workflow"
 on:
   push:
     branches:
+      # production is critical, we always want to run the action on it
+      - production
+  pull_request:
+    branches:
       - production
       - development
       - 'feature/**'

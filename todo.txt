@@ -2,6 +2,8 @@ todo:
 * figure out branch protection on git
 * do pass on naming conventions
 * test cases
+* I think I want to merge the workflow action into the default branch
+    so I can use a manual action
 
 talk:
     * github action
