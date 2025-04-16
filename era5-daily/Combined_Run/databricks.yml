@@ -9,7 +9,9 @@ resources:
     era5_01_bronze_source_to_staging_job:
       name: era5_01_bronze_source_to_staging_job
       schedule:
-        # Daily at midnight UTC
+        # format is SEC MIN HOUR DOM MON DOW, DOW
+        # DOW is "?" because DOM is already "all days" with a "*" so "?"
+        # means we don't care, not that we try to match them all
         quartz_cron_expression: '0 0 0 * * ?'
         timezone_id: 'UTC'
       tags:
@@ -40,3 +42,7 @@ targets:
       jobs:
         era5_01_bronze_source_to_staging_job:
           schedule: null
+  test:
+    mode: development
+    workspace:
+      host: *workspace_host
