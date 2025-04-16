@@ -4,7 +4,7 @@ run_as:
   service_principal_name: 0dbc3b87-0681-43d4-b52e-53bce65fcae5
 targets:
   era5_pipeline:
-    mode: set_by_github_action
+    mode: development
     workspace:
       host: https://dbc-ad3d47af-affb.cloud.databricks.com/
     resources:
