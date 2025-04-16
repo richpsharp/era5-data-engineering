@@ -8,35 +8,19 @@ on:
       - 'feature/**'
 
 jobs:
-  checkout_repo:
-    name: "checkout repository"
+  deploy_and_run_combined_job:
+    name: "deploy and run combined era5 jobs"
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository
         uses: actions/checkout@v3
 
-  setup_databricks_cli:
-    name: "setup databricks cli"
-    runs-on: ubuntu-latest
-    steps:
       - name: setup databricks cli
         uses: databricks/setup-cli@main
 
-  install_yq:
-    name: "install yq"
-    runs-on: ubuntu-latest
-    steps:
-      - name: install yq
+      - name: install yq  # used to dynamically edit our databricks.yml file
         run: pip install yq
 
-  deploy_and_run_combined_job:
-    name: "deploy and run combined era5 jobs"
-    runs-on: ubuntu-latest
-    needs:
-      - checkout_repo
-      - setup_databricks_cli
-      - install_yq
-    steps:
       - name: determine dab pipeline mode
         run: |
           if [[ "$GITHUB_REF_NAME" == "production" ]]; then
@@ -47,9 +31,6 @@ jobs:
       - name: update databricks.yml file
         working-directory: ./era5-daily/Combined_Run
         run: |
-          echo #MODE
-          echo `pwd`
-          echo `ls`
           yq ".targets.era5_pipeline.mode = \"${MODE}\"" databricks.yml -yi
           cat databricks.yml
       - name: Deploy DAB
@@ -60,12 +41,10 @@ jobs:
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
-      # # Step 4: Run the Job Using Databricks Bundle Command
-      # - name: Run the Deployed Job Without Tracking
-      #   working-directory: ./era5-daily/Combined_Run
-      #   run: |
-      #     databricks bundle run uber_job --no-wait
-      #   env:
-      #     DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
-      #     DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-      #     DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      - name: Run the Deployed Job Without Tracking
+        working-directory: ./era5-daily/Combined_Run
+        run: |
+          databricks bundle run --target era5_pipeline
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
