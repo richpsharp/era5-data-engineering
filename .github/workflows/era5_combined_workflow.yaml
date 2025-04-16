@@ -42,4 +42,4 @@ jobs:
       - name: Run the job once
         working-directory: ./era5-daily/Combined_Run
         run: |
-          databricks bundle run --target $MODE
+          databricks bundle run era5_01_source_to_staging_job --target $MODE

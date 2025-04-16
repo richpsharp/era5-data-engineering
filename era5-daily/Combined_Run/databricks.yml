@@ -30,10 +30,10 @@ targets:
     workspace:
       host: *workspace_host
   development:
+    # only difference for development is to not set a cron job
     mode: development
     workspace:
       host: *workspace_host
-    # only difference for development is to not set a cron job
     resources:
       jobs:
         era5_01_source_to_staging_job:
