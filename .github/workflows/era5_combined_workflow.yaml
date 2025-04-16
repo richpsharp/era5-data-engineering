@@ -21,6 +21,8 @@ jobs:
         with:
           path: ~/.cache/pip
           key: pip install yq
+
+      -name: install yq
         run: pip install yq
 
       - name: Update databricks.yml file
