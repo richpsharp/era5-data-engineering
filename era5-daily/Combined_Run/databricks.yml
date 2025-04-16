@@ -1,26 +1,21 @@
 bundle:
   name: combined_run
-
 run_as:
-  # (service principal name is not considered sensitive information)
-  # era5-service-principal
-  service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
-
+  service_principal_name: 0dbc3b87-0681-43d4-b52e-53bce65fcae5
 targets:
   era5_pipeline:
-    # mode is placeholder, replaced by GitHub action see
-    # `.github/workflows/era5_combined_workflow.yaml`
-    mode: test
+    mode: set_by_github_action
     workspace:
-      # (Databricks workspace host URL is not considered sensitive information)
       host: https://dbc-ad3d47af-affb.cloud.databricks.com/
     resources:
       jobs:
         era5_01_source_to_staging_job:
-          name: "era5_01_source_to_staging_job"
+          name: era5_01_source_to_staging_job
           tasks:
             - task_key: era5_01_source_to_staging_task
               spark_python_task:
                 python_file: src/era5_01_source_to_staging.py
-                parameters: ['--catalog_schema', 'era5_daily_data.bronze_dev']
-              existing_cluster_id: "0406-134207-et9icx79"
+                parameters:
+                  - --catalog_schema
+                  - era5_daily_data.bronze_dev
+              existing_cluster_id: 0406-134207-et9icx79
