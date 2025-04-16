@@ -1,5 +1,5 @@
 todo:
-* figure out branch protection on git
+x figure out branch protection on git
 * do pass on naming conventions
 * test cases
 * I think I want to merge the workflow action into the default branch
@@ -19,11 +19,13 @@ talk:
     * branch conventions
         * I would like dev and production to only be able to be altered through
             pull requests that must have at least one approval, no direct pushes
-        * branches:
-            * production
-            * development
-            * feature/{issue number}_{short description}
-            * bugfix/{issue number}_{short description}
+        * branch name proposals:
+            * production (currently `prod`) (can only pull from development or hotfix/{issue number})
+            * development (features/bugfixes pull into here)
+            * Working branches from forks hopefully
+                * feature/{issue number}_{short description}
+                * bugfix/{issue number}_{short description}
+            * then not sure about dev-main, dev-main-hobson, staging
     * PR convention
         * must pass all test cases
         * code must conform to PEP8 style with exceptions allowed
