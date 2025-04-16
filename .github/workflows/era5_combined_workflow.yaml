@@ -41,10 +41,10 @@ jobs:
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
-      - name: Run the Deployed Job Without Tracking
-        working-directory: ./era5-daily/Combined_Run
-        run: |
-          databricks bundle run era5_01_source_to_staging_job
-        env:
-          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      # - name: Run the Deployed Job Without Tracking
+      #   working-directory: ./era5-daily/Combined_Run
+      #   run: |
+      #     databricks bundle run era5_01_source_to_staging_job
+      #   env:
+      #     DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      #     DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}

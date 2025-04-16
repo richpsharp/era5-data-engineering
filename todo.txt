@@ -3,6 +3,8 @@ Today:
 * make compute as part of DAB in a json file?
 * move everything out of subdirectory into top directory
 * rename the repository to era5-gwsc-databricks
+* would like to move era5
+* name the *JOB* like this: Naming files, pipelines, dataproducts, and similar is based roughly on this template: ```{data product era5/cmip6}_{stage number/01/02/01a/...}_{bronze/silver/gold}_{descriptive name}_{production/development/test}_{branch name (feature)}```.
 
 Notes:
 
