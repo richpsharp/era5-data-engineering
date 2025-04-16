@@ -11,6 +11,9 @@ jobs:
   deploy_and_run_combined_job:
     name: "deploy and run combined era5 jobs"
     runs-on: ubuntu-latest
+    env:
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v3
@@ -35,14 +38,8 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         run: |
           databricks bundle deploy --target $MODE
-        env:
-          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
       - name: Run the job once
         working-directory: ./era5-daily/Combined_Run
         run: |
           databricks bundle run --target $MODE
-        env:
-          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
