@@ -39,6 +39,7 @@ jobs:
         run: echo "BRANCH=${GITHUB_REF_NAME#refs/heads/}" >> $GITHUB_OUTPUT
 
       - name: Inject branch name into DAB
+        working-directory: ./era5-daily/Combined_Run
         run: |
           /usr/local/bin/yq eval -i '.resources.jobs.era5_01_bronze_source_to_staging_job.tags.BRANCH = env(BRANCH)' databricks.yml
           cat databricks.yml
