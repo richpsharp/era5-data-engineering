@@ -37,9 +37,11 @@ jobs:
 
       - name: determine DAB mode
         run: |
+          # check if there's a manual override
           if [[ -n "${{ github.event.inputs.dab_target }}" ]]; then
             echo "MODE=${{ github.event.inputs.dab_target }}" >> $GITHUB_ENV
           else
+            # else, set mode based on branch name
             if [[ "$GITHUB_REF_NAME" == "production" ]]; then
               echo "MODE=production" >> $GITHUB_ENV
             else
