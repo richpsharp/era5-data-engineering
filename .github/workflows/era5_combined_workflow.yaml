@@ -40,7 +40,7 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         # set the pipeline mode to be the name of the branch
         run: |
-          yq ".targets.era5_pipeline.mode = \"env(MODE)\" databricks.yml -yi
+          yq ".targets.era5_pipeline.mode = \"${MODE}\" databricks.yml -yi
           cat databricks.yml
 
       # Step 3: Deploy the Databricks Bundle
