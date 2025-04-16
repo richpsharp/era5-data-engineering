@@ -6,6 +6,7 @@ on:
       - production
       - development
       - 'feature/**'
+      - 'bugfix/**'
 
 jobs:
   deploy_and_run_combined_job:
@@ -29,6 +30,21 @@ jobs:
             echo "MODE=development" >> $GITHUB_ENV
           fi
 
+      - name: Install yq for YAML dynamic injection
+        run: |
+          sudo curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -o /usr/local/bin/yq && sudo chmod +x /usr/local/bin/yq
+
+      - name: Determine branch name for DAB tag
+        id: branch
+        run: echo "BRANCH=${GITHUB_REF_NAME#refs/heads/}" >> $GITHUB_OUTPUT
+
+      - name: Inject branch name into DAB
+        run: |
+          /usr/local/bin/yq eval -i '.resources.jobs.era5_01_bronze_source_to_staging_job.tags.BRANCH = env(BRANCH)' databricks.yml
+          cat databricks.yml
+        env:
+          BRANCH: ${{ steps.branch.outputs.BRANCH }}
+
       - name: Validate DAB
         working-directory: ./era5-daily/Combined_Run
         run: |
@@ -39,7 +55,7 @@ jobs:
         run: |
           databricks bundle deploy --target $MODE
 
-      - name: Run the job once
+      - name: Run the era5_01_source_to_staging_job once
         working-directory: ./era5-daily/Combined_Run
         run: |
           databricks bundle run era5_01_source_to_staging_job --target $MODE

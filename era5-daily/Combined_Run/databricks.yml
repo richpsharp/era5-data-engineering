@@ -1,17 +1,19 @@
 bundle:
-  name: combined_run
+  name: era5_01_bronze_source_to_staging_run
 
 run_as:
   service_principal_name: 0dbc3b87-0681-43d4-b52e-53bce65fcae5
 
 resources:
   jobs:
-    era5_01_source_to_staging_job:
-      name: era5_01_source_to_staging_job
+    era5_01_bronze_source_to_staging_job:
+      name: era5_01_bronze_source_to_staging_job
       schedule:
         # Daily at midnight UTC
         quartz_cron_expression: '0 0 0 * * ?'
         timezone_id: 'UTC'
+      tags:
+        BRANCH: will_be_set_by_github_action
       tasks:
         - task_key: era5_01_source_to_staging_task
           spark_python_task:
@@ -36,5 +38,5 @@ targets:
       host: *workspace_host
     resources:
       jobs:
-        era5_01_source_to_staging_job:
+        era5_01_bronze_source_to_staging_job:
           schedule: null

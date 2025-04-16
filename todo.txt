@@ -1,10 +1,47 @@
+todo:
+* figure out branch protection on git
+* do pass on naming conventions
+* test cases
+
+talk:
+    * github action
+        * if development "tag" (anything that's not the production branch),
+            * runs test cases
+            * pushes a DAB
+            * runs the dab on a small set,
+            * leaves it there so you can check it online
+        * if production (only PRs to production),
+            * runs test cases
+            * pushes dab runs full set
+            * if successful starts daily cron job
+    * branch conventions
+        * I would like dev and production to only be able to be altered through
+            pull requests that must have at least one approval, no direct pushes
+        * branches:
+            * production
+            * development
+            * feature/{issue number}_{short description}
+            * bugfix/{issue number}_{short description}
+    * PR convention
+        * must pass all test cases
+        * code must conform to PEP8 style with exceptions allowed
+        * docstrings must be google style
+    * bronze/silver/gold naming conventions
+        * just look at "era5_01_source_to_staging_run"  is it
+            "era5_01_bronze_source_to_staging_run"?
+    * {data product era5/cmip6}_{stage number/01/02/01a/...}_{bronze/silver/gold}_{descriptive name}_{prod/development/test}_{branch name (feature)}
+    * existing readmes are bloated, can I put off for future?
+
+
 Today:
-* Get github actions to do the databricks DAB based off the branch name
+x Get github actions to do the databricks DAB based off the branch name
 * make compute as part of DAB in a json file?
 * move everything out of subdirectory into top directory
 * rename the repository to era5-gwsc-databricks
 * would like to move era5
 * name the *JOB* like this: Naming files, pipelines, dataproducts, and similar is based roughly on this template: ```{data product era5/cmip6}_{stage number/01/02/01a/...}_{bronze/silver/gold}_{descriptive name}_{production/development/test}_{branch name (feature)}```.
+* add tests
+
 
 Notes:
 
