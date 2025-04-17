@@ -32,6 +32,7 @@ jobs:
     name: "deploy and run combined era5 jobs"
     runs-on: ubuntu-latest
     env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEVELOPMENT }}
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
       DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
     steps:

@@ -30,13 +30,13 @@ test_era5_01_bronze_source_to_staging_anchor: &test_era5_01_bronze_source_to_sta
       python_file: tests/run_pytest.py
     existing_cluster_id: "0406-134207-et9icx79"
 
-workspace_host: &workspace_host https://dbc-ad3d47af-affb.cloud.databricks.com/
+#workspace_host: &workspace_host https://dbc-ad3d47af-affb.cloud.databricks.com/
 
 targets:
   production:
     mode: production
-    workspace:
-      host: *workspace_host
+    # workspace:
+    #   host: *workspace_host
     resources:
       jobs:
         # production gets the full job
@@ -44,8 +44,8 @@ targets:
 
   development:
     mode: development
-    workspace:
-      host: *workspace_host
+    # workspace:
+    #   host: *workspace_host
     resources:
       jobs:
         <<: *era5_01_bronze_source_to_staging_anchor
@@ -55,8 +55,8 @@ targets:
 
   test:
     mode: development
-    workspace:
-      host: *workspace_host
+    # workspace:
+    #   host: *workspace_host
     resources:
       jobs:
         # in test we only want the test job
