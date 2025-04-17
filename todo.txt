@@ -5,7 +5,7 @@ x name the *JOB* like this: Naming files, pipelines, dataproducts, and similar i
 x figure out branch protection on git
 x do pass on naming conventions
 * test cases
-* Merge the workflow action into the default branch with hotfix
+* (sent to hobson for PR) Merge the workflow action into the default branch with hotfix
     so I can use a manual action
 
 talk:

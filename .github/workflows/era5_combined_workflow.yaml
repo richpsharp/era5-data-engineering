@@ -62,15 +62,10 @@ jobs:
         run: |
           sudo curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -o /usr/local/bin/yq && sudo chmod +x /usr/local/bin/yq
 
-      - name: Determine branch name for DAB tag
-        id: branch
-        run: echo "BRANCH=${GITHUB_REF_NAME#refs/heads/}" >> $GITHUB_OUTPUT
-
-      - name: Inject branch name into DAB
+      - name: Inject branch name into DAB via sed
         working-directory: ./era5-daily/Combined_Run
         run: |
-          /usr/local/bin/yq eval -i '.resources.jobs.era5_01_bronze_source_to_staging_job.tags.BRANCH = env(BRANCH)' databricks.yml
-          /usr/local/bin/yq eval -i '.resources.jobs.test_era5_01_bronze_source_to_staging_job.tags.BRANCH = env(BRANCH)' databricks.yml
+          sed -i "s/BRANCH: will_be_set_by_github_action/BRANCH: ${BRANCH}/g" databricks.yml
           cat databricks.yml
         env:
           BRANCH: ${{ steps.branch.outputs.BRANCH }}
