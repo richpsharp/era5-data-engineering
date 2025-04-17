@@ -65,7 +65,8 @@ jobs:
       - name: Inject branch name into DAB via sed
         working-directory: ./era5-daily/Combined_Run
         run: |
-          sed -i "s/BRANCH: will_be_set_by_github_action/BRANCH: ${BRANCH}/g" databricks.yml
+          # use | delimiters because branch name has a / in it
+          sed -i "s|BRANCH: will_be_set_by_github_action|BRANCH: ${BRANCH}|g" databricks.yml
           cat databricks.yml
         env:
           BRANCH: ${{ steps.branch.outputs.BRANCH }}
