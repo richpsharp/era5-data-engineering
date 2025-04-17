@@ -58,9 +58,9 @@ jobs:
             fi
           fi
 
-      - name: Install yq for YAML dynamic injection
-        run: |
-          sudo curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -o /usr/local/bin/yq && sudo chmod +x /usr/local/bin/yq
+      - name: Determine branch name for DAB tag
+        id: branch
+        run: echo "BRANCH=${GITHUB_REF_NAME#refs/heads/}" >> $GITHUB_OUTPUT
 
       - name: Inject branch name into DAB via sed
         working-directory: ./era5-daily/Combined_Run
