@@ -7,7 +7,7 @@ run_as:
 # Anchors to defining each job exactly once so we can use it
 # in multiple targets
 era5_01_bronze_source_to_staging_anchor: &era5_01_bronze_source_to_staging_anchor
-  era5_01_bronize_source_to_staging_job:
+  era5_01_bronze_source_to_staging_job:
     name: era5_01_bronze_source_to_staging_job
     schedule:
       quartz_cron_expression: '0 0 0 * * ?'
