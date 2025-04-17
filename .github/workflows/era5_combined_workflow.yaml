@@ -46,13 +46,15 @@ jobs:
         run: |
           # check if there's a manual override
           if [[ -n "${{ github.event.inputs.dab_target }}" ]]; then
-            echo "MODE=${{ github.event.inputs.dab_target }}" >> $GITHUB_ENV
+            echo "TARGET=${{ github.event.inputs.dab_target }}" >> $GITHUB_ENV
           else
             # else, set mode based on branch name
             if [[ "$GITHUB_REF_NAME" == "production" ]]; then
-              echo "MODE=production" >> $GITHUB_ENV
+              echo "TARGET=production" >> $GITHUB_ENV
+            elif [[ "$GITHUB_REF_NAME" == "development" ]]; then
+              echo "TARGET=development" >> $GITHUB_ENV
             else
-              echo "MODE=development" >> $GITHUB_ENV
+              echo "TARGET=test" >> $GITHUB_ENV
             fi
           fi
 
@@ -76,19 +78,19 @@ jobs:
       - name: Validate DAB
         working-directory: ./era5-daily/Combined_Run
         run: |
-          databricks bundle validate --target $MODE
+          databricks bundle validate --target $TARGET
 
       - name: Deploy DAB
         working-directory: ./era5-daily/Combined_Run
         run: |
-          databricks bundle deploy --target $MODE
+          databricks bundle deploy --target $TARGET
 
       - name: Run the tests
         working-directory: ./era5-daily/Combined_Run
         run: |
-          databricks bundle run test_era5_01_bronze_source_to_staging_job --target test
+          databricks bundle run test_era5_01_bronze_source_to_staging_job --target $TARGET
 
       - name: Run the era5_01_bronze_source_to_staging_job once
         working-directory: ./era5-daily/Combined_Run
         run: |
-          databricks bundle run era5_01_bronze_source_to_staging_job --target $MODE
+          databricks bundle run era5_01_bronze_source_to_staging_job --target $TARGET
