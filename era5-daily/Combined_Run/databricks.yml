@@ -26,9 +26,13 @@ era5_01_bronze_source_to_staging_anchor: &era5_01_bronze_source_to_staging_ancho
 test_era5_01_bronze_source_to_staging_anchor: &test_era5_01_bronze_source_to_staging_anchor
   test_era5_01_bronze_source_to_staging_job:
     name: test_era5_01_bronze_source_to_staging_job
-    spark_python_task:
-      python_file: tests/run_pytest.py
-    existing_cluster_id: "0406-134207-et9icx79"
+    tags:
+      BRANCH: will_be_set_by_github_action
+    tasks:
+      - task_key: test_era5_01_bronze_source_to_staging_task
+        spark_python_task:
+          python_file: test/test_era5_01_bronze_source_to_staging_db_notebook_launch.py
+        existing_cluster_id: "0406-134207-et9icx79"
 
 #workspace_host: &workspace_host https://dbc-ad3d47af-affb.cloud.databricks.com/
 
