@@ -78,12 +78,12 @@ jobs:
       - name: Validate DAB
         working-directory: ./era5-daily/Combined_Run
         run: |
-          databricks bundle validate --target $TARGET
+          databricks bundle validate
 
       - name: Deploy DAB
         working-directory: ./era5-daily/Combined_Run
         run: |
-          databricks bundle deploy --target $TARGET
+          databricks bundle deploy
 
       - name: Run the tests
         working-directory: ./era5-daily/Combined_Run
