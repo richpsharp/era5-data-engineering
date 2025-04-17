@@ -83,7 +83,7 @@ jobs:
         run: |
           databricks bundle deploy --target $MODE
 
-      - name: Run the tests:
+      - name: Run the tests
         working-directory: ./era5-daily/Combined_Run
         run: |
           databricks bundle run test_era5_01_bronze_source_to_staging_job --target test
