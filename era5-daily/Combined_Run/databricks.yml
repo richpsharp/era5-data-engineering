@@ -29,7 +29,7 @@ resources:
       tasks:
         - task_key: test_era5_01_bronze_source_to_staging_task
           spark_python_task:
-            python_file: tests/test_era5_01_bronze_source_to_staging.py
+            python_file: tests/test_runner.py
           existing_cluster_id: "0406-134207-et9icx79"
 
 workspace_host: &workspace_host https://dbc-ad3d47af-affb.cloud.databricks.com/
