@@ -71,22 +71,33 @@ jobs:
         env:
           BRANCH: ${{ steps.branch.outputs.BRANCH }}
 
-      - name: Validate DAB
+      - name: Validate test DAB
         working-directory: ./era5-daily/Combined_Run
         run: |
-          databricks bundle validate
+          databricks bundle validate --target test
 
-      - name: Deploy DAB
+      - name: Deploy test DAB
         working-directory: ./era5-daily/Combined_Run
         run: |
-          databricks bundle deploy
+          databricks bundle deploy --target test
 
       - name: Run the tests
         working-directory: ./era5-daily/Combined_Run
         run: |
-          databricks bundle run test_era5_01_bronze_source_to_staging_job --target $TARGET
+          databricks bundle run test_era5_01_bronze_source_to_staging_job --target test
 
-      - name: Run the era5_01_bronze_source_to_staging_job once
+      - name: Validate target DAB
         working-directory: ./era5-daily/Combined_Run
         run: |
-          databricks bundle run era5_01_bronze_source_to_staging_job --target $TARGET
+          databricks bundle validate --target $TARGET
+
+      - name: Deploy target DAB
+        working-directory: ./era5-daily/Combined_Run
+        run: |
+          databricks bundle deploy --target $TARGET
+
+      - name: Run target
+        if: ${{ env.TARGET == 'production' }}
+        working-directory: ./era5-daily/Combined_Run
+        run: |
+          databricks bundle run test_era5_01_bronze_source_to_staging_job --target $TARGET
