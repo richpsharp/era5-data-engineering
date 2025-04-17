@@ -51,10 +51,8 @@ jobs:
             # else, set mode based on branch name
             if [[ "$GITHUB_REF_NAME" == "production" ]]; then
               echo "MODE=production" >> $GITHUB_ENV
-            elif [[ "$GITHUB_REF_NAME" == "development" ]]; then
-              echo "MODE=development" >> $GITHUB_ENV
             else
-              echo "MODE=test" >> $GITHUB_ENV
+              echo "MODE=development" >> $GITHUB_ENV
             fi
           fi
 
@@ -70,6 +68,7 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         run: |
           /usr/local/bin/yq eval -i '.resources.jobs.era5_01_bronze_source_to_staging_job.tags.BRANCH = env(BRANCH)' databricks.yml
+          /usr/local/bin/yq eval -i '.resources.jobs.test_era5_01_bronze_source_to_staging_job.tags.BRANCH = env(BRANCH)' databricks.yml
           cat databricks.yml
         env:
           BRANCH: ${{ steps.branch.outputs.BRANCH }}
@@ -83,6 +82,11 @@ jobs:
         working-directory: ./era5-daily/Combined_Run
         run: |
           databricks bundle deploy --target $MODE
+
+      - name: Run the tests:
+        working-directory: ./era5-daily/Combined_Run
+        run: |
+          databricks bundle run test_era5_01_bronze_source_to_staging_job --target test
 
       - name: Run the era5_01_bronze_source_to_staging_job once
         working-directory: ./era5-daily/Combined_Run
