@@ -2,30 +2,34 @@ bundle:
   name: era5_01_bronze_source_to_staging_run
 
 run_as:
-  service_principal_name: 0dbc3b87-0681-43d4-b52e-53bce65fcae5
+  service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
 
-resources:
-  jobs:
-    era5_01_bronze_source_to_staging_job:
-      name: era5_01_bronze_source_to_staging_job
-      schedule:
-        # format is SEC MIN HOUR DOM MON DOW, DOW
-        # DOW is "?" because DOM is already "all days" with a "*" so "?"
-        # means we don't care, not that we try to match them all
-        quartz_cron_expression: '0 0 0 * * ?'
-        timezone_id: 'UTC'
-      tags:
-        BRANCH: will_be_set_by_github_action
-      tasks:
-        - task_key: era5_01_bronze_source_to_staging_task
-          spark_python_task:
-            python_file: src/era5_01_bronze_source_to_staging.py
-            parameters:
-              - --catalog_schema
-              - era5_daily_data.bronze_dev
-          existing_cluster_id: 0406-134207-et9icx79
+# Anchors to defining each job exactly once so we can use it
+# in multiple targets
+era5_01_bronze_source_to_staging_anchor: &era5_01_bronze_source_to_staging_anchor
+  era5_01_bronize_source_to_staging_job:
+    name: era5_01_bronze_source_to_staging_job
+    schedule:
+      quartz_cron_expression: '0 0 0 * * ?'
+      timezone_id: 'UTC'
+    tags:
+      BRANCH: will_be_set_by_github_action
+    tasks:
+      - task_key: era5_01_bronze_source_to_staging_task
+        spark_python_task:
+          python_file: src/era5_01_bronze_source_to_staging.py
+          parameters:
+            - --catalog_schema
+            - era5_daily_data.bronze_dev
+        existing_cluster_id: "0406-134207-et9icx79"
 
-# Same workspace for development and production
+test_era5_01_bronze_source_to_staging_anchor: &test_era5_01_bronze_source_to_staging_anchor
+  test_era5_01_bronze_source_to_staging_job:
+    name: test_era5_01_bronze_source_to_staging_job
+    spark_python_task:
+      python_file: tests/run_pytest.py
+    existing_cluster_id: "0406-134207-et9icx79"
+
 workspace_host: &workspace_host https://dbc-ad3d47af-affb.cloud.databricks.com/
 
 targets:
@@ -33,16 +37,27 @@ targets:
     mode: production
     workspace:
       host: *workspace_host
+    resources:
+      jobs:
+        # production gets the full job
+        <<: *era5_01_bronze_source_to_staging_anchor
+
   development:
-    # only difference for development is to not set a cron job
     mode: development
     workspace:
       host: *workspace_host
     resources:
       jobs:
+        <<: *era5_01_bronze_source_to_staging_anchor
         era5_01_bronze_source_to_staging_job:
+          # in development we don't want the cron job
           schedule: null
+
   test:
     mode: development
     workspace:
       host: *workspace_host
+    resources:
+      jobs:
+        # in test we only want the test job
+        <<: *test_era5_01_bronze_source_to_staging_anchor

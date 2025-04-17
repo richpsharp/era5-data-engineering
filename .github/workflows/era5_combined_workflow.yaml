@@ -5,7 +5,7 @@ on:
     branches:
       # production is critical, we always want to run the action on it
       - production
-      # these are just useful for development
+      - development
       - 'feature/**'
       - 'bugfix/**'
       - 'hotfix/**'
@@ -50,8 +50,10 @@ jobs:
             # else, set mode based on branch name
             if [[ "$GITHUB_REF_NAME" == "production" ]]; then
               echo "MODE=production" >> $GITHUB_ENV
-            else
+            elif [[ "$GITHUB_REF_NAME" == "development" ]]; then
               echo "MODE=development" >> $GITHUB_ENV
+            else
+              echo "MODE=test" >> $GITHUB_ENV
             fi
           fi
 
@@ -76,12 +78,20 @@ jobs:
         run: |
           databricks bundle validate --target $MODE
 
+      - name: Run tests on Databricks cluster
+        if: env.MODE == 'test'
+        uses: databricks/run-notebook@v0.4.0
+        with:
+          notebook-path: tests/test_era5_01_bronze_source_to_staging_db_notebook_launch.py
+
       - name: Deploy DAB
+        if: env.MODE != 'test'
         working-directory: ./era5-daily/Combined_Run
         run: |
           databricks bundle deploy --target $MODE
 
       - name: Run the era5_01_bronze_source_to_staging_job once
+        if: env.MODE != 'test'
         working-directory: ./era5-daily/Combined_Run
         run: |
           databricks bundle run era5_01_bronze_source_to_staging_job --target $MODE

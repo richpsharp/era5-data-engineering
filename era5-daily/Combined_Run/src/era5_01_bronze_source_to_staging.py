@@ -19,7 +19,6 @@ from config import ERA5_SOURCE_VOLUME_PATH
 from config import ERA5_STAGING_VOLUME_ID
 from config import LOCAL_EPHEMERAL_PATH
 from config import DEFAULT_LOCAL_CATALOG_FQDN
-from databricks.sdk.runtime import spark
 from pyspark.sql import Row
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, col, explode
@@ -29,15 +28,6 @@ from utils.file_utils import hash_file
 from utils.file_utils import is_netcdf_file_valid
 from utils.table_definition_loader import create_table
 from utils.table_definition_loader import load_table_struct
-
-# I encountered some cases when dbutils was not defined, so this makes sure
-# that it is
-try:
-    dbutils  # Check if dbutils is defined
-except NameError:
-    from pyspark.dbutils import DBUtils
-
-    dbutils = DBUtils(spark)
 
 
 class ImmediateFlushHandler(logging.StreamHandler):
@@ -276,7 +266,9 @@ def main():
                 ).isoformat(),
             }
             # prefix with dbfs: because it's faster
-            for file_info in dbutils.fs.ls(f"dbfs:{source_directory}")
+            for file_info in dbutils.fs.ls(  # noqa: F821
+                f"dbfs:{source_directory}"
+            )
             if (match := pattern.search(os.path.basename(file_info.path)))
             and (  # noqa: W503
                 file_date := datetime.datetime.strptime(
