@@ -44,6 +44,7 @@ targets:
     resources:
       jobs:
         # production gets the full job
+        <<: *test_era5_01_bronze_source_to_staging_anchor
         <<: *era5_01_bronze_source_to_staging_anchor
 
   development:
@@ -52,6 +53,7 @@ targets:
     #   host: *workspace_host
     resources:
       jobs:
+        <<: *test_era5_01_bronze_source_to_staging_anchor
         <<: *era5_01_bronze_source_to_staging_anchor
         era5_01_bronze_source_to_staging_job:
           # in development we don't want the cron job
@@ -63,5 +65,5 @@ targets:
     #   host: *workspace_host
     resources:
       jobs:
-        # in test we only want the test job
         <<: *test_era5_01_bronze_source_to_staging_anchor
+        <<: *era5_01_bronze_source_to_staging_anchor
