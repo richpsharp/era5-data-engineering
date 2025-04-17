@@ -6,7 +6,6 @@ run_as:
 
 resources:
   jobs:
-    # real pipeline job, default = scheduled daily at midnight
     era5_01_bronze_source_to_staging_job:
       name: era5_01_bronze_source_to_staging_job
       schedule:
@@ -23,7 +22,6 @@ resources:
               - era5_daily_data.bronze_dev
           existing_cluster_id: "0406-134207-et9icx79"
 
-    # test wrapper job, default = no schedule
     test_era5_01_bronze_source_to_staging_job:
       name: test_era5_01_bronze_source_to_staging_job
       tags:
@@ -31,7 +29,7 @@ resources:
       tasks:
         - task_key: test_era5_01_bronze_source_to_staging_task
           spark_python_task:
-            python_file: tests/run_pytest.py
+            python_file: tests/test_era5_01_bronze_source_to_staging.py
           existing_cluster_id: "0406-134207-et9icx79"
 
 workspace_host: &workspace_host https://dbc-ad3d47af-affb.cloud.databricks.com/
