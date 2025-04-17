@@ -4,35 +4,35 @@ bundle:
 run_as:
   service_principal_name: "0dbc3b87-0681-43d4-b52e-53bce65fcae5"
 
-# Anchors to defining each job exactly once so we can use it
-# in multiple targets
-era5_01_bronze_source_to_staging_anchor: &era5_01_bronze_source_to_staging_anchor
-  era5_01_bronze_source_to_staging_job:
-    name: era5_01_bronze_source_to_staging_job
-    schedule:
-      quartz_cron_expression: '0 0 0 * * ?'
-      timezone_id: 'UTC'
-    tags:
-      BRANCH: will_be_set_by_github_action
-    tasks:
-      - task_key: era5_01_bronze_source_to_staging_task
-        spark_python_task:
-          python_file: src/era5_01_bronze_source_to_staging.py
-          parameters:
-            - --catalog_schema
-            - era5_daily_data.bronze_dev
-        existing_cluster_id: "0406-134207-et9icx79"
+resources:
+  jobs:
+    # real pipeline job, default = scheduled daily at midnight
+    era5_01_bronze_source_to_staging_job:
+      name: era5_01_bronze_source_to_staging_job
+      schedule:
+        quartz_cron_expression: '0 0 0 * * ?'
+        timezone_id: 'UTC'
+      tags:
+        BRANCH: will_be_set_by_github_action
+      tasks:
+        - task_key: era5_01_bronze_source_to_staging_task
+          spark_python_task:
+            python_file: src/era5_01_bronze_source_to_staging.py
+            parameters:
+              - --catalog_schema
+              - era5_daily_data.bronze_dev
+          existing_cluster_id: "0406-134207-et9icx79"
 
-test_era5_01_bronze_source_to_staging_anchor: &test_era5_01_bronze_source_to_staging_anchor
-  test_era5_01_bronze_source_to_staging_job:
-    name: test_era5_01_bronze_source_to_staging_job
-    tags:
-      BRANCH: will_be_set_by_github_action
-    tasks:
-      - task_key: test_era5_01_bronze_source_to_staging_task
-        spark_python_task:
-          python_file: tests/test_era5_01_bronze_source_to_staging_db_notebook_launch.py
-        existing_cluster_id: "0406-134207-et9icx79"
+    # test wrapper job, default = no schedule
+    test_era5_01_bronze_source_to_staging_job:
+      name: test_era5_01_bronze_source_to_staging_job
+      tags:
+        BRANCH: will_be_set_by_github_action
+      tasks:
+        - task_key: test_era5_01_bronze_source_to_staging_task
+          spark_python_task:
+            python_file: tests/run_pytest.py
+          existing_cluster_id: "0406-134207-et9icx79"
 
 workspace_host: &workspace_host https://dbc-ad3d47af-affb.cloud.databricks.com/
 
@@ -41,11 +41,7 @@ targets:
     mode: production
     workspace:
       host: *workspace_host
-    resources:
-      jobs:
-        # production gets the full job
-        <<: *test_era5_01_bronze_source_to_staging_anchor
-        <<: *era5_01_bronze_source_to_staging_anchor
+    # No overrides: pipeline runs daily, test job never schedules itself.
 
   development:
     mode: development
@@ -53,10 +49,8 @@ targets:
       host: *workspace_host
     resources:
       jobs:
-        <<: *test_era5_01_bronze_source_to_staging_anchor
-        <<: *era5_01_bronze_source_to_staging_anchor
+        # disable pipeline cron in dev
         era5_01_bronze_source_to_staging_job:
-          # in development we don't want the cron job
           schedule: null
 
   test:
@@ -65,5 +59,6 @@ targets:
       host: *workspace_host
     resources:
       jobs:
-        <<: *test_era5_01_bronze_source_to_staging_anchor
-        <<: *era5_01_bronze_source_to_staging_anchor
+        # also disable pipeline cron in test
+        era5_01_bronze_source_to_staging_job:
+          schedule: null
