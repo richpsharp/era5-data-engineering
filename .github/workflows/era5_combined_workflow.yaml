@@ -80,9 +80,9 @@ jobs:
 
       - name: Run tests on Databricks cluster
         if: env.MODE == 'test'
-        uses: databricks/run-notebook@v0.0.3
+        uses: databricks/run-notebook@v0
         with:
-          notebook-path: tests/test_era5_01_bronze_source_to_staging_db_notebook_launch.py
+          local-notebook-path: tests/test_era5_01_bronze_source_to_staging_db_notebook_launch.py
 
       - name: Deploy DAB
         if: env.MODE != 'test'
